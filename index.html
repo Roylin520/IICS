@@ -18,12 +18,20 @@ nav{display:flex;gap:6px;flex-wrap:wrap}
 nav button{background:rgba(255,255,255,.15);border:none;color:#fff;padding:7px 14px;border-radius:8px;cursor:pointer;font-size:.95rem;font-family:inherit}
 nav button.active{background:#fff;color:var(--brand);font-weight:700}
 #menutoggle{display:none;margin-left:auto;background:rgba(255,255,255,.2);border:none;color:#fff;padding:8px 16px;border-radius:8px;font-size:1rem;font-weight:700;font-family:inherit;cursor:pointer}
+.navsub{display:none}
+.navrow{display:contents}
+.navexp{display:none}
 @media (max-width:640px){
   header h1{font-size:1rem}
   #menutoggle{display:block}
-  nav{position:absolute;top:100%;left:12px;right:12px;flex-direction:column;flex-wrap:nowrap;background:var(--brand);border-radius:0 0 12px 12px;padding:8px;gap:5px;box-shadow:0 10px 24px rgba(0,0,0,.28);display:none;z-index:20}
+  nav{position:absolute;top:100%;left:12px;right:12px;flex-direction:column;flex-wrap:nowrap;background:var(--brand);border-radius:0 0 12px 12px;padding:8px;gap:5px;box-shadow:0 10px 24px rgba(0,0,0,.28);display:none;z-index:20;max-height:calc(100vh - 80px);overflow-y:auto}
   nav.open{display:flex}
   nav button{width:100%;text-align:left;padding:12px 16px;font-size:1.02rem;background:rgba(255,255,255,.12)}
+  nav.open .navrow{display:flex;gap:5px}
+  nav.open .navrow .navtab{flex:1;width:auto}
+  nav.open .navexp{display:flex;align-items:center;justify-content:center;flex:none;width:52px;padding:0;font-size:1.4rem;font-weight:800;background:rgba(255,255,255,.28)}
+  nav.open .navsub{display:block;padding:9px 16px 9px 34px;font-size:.94rem;background:rgba(255,255,255,.06)}
+  nav.open .navsub.active{background:#fff;color:var(--brand);font-weight:700}
 }
 main{max-width:1000px;margin:0 auto;padding:20px}
 main.wide{max-width:none;padding:14px 18px}
@@ -87,8 +95,7 @@ button.sm{padding:4px 12px;font-size:.85rem}
 .upill{min-width:34px;height:34px;border-radius:9px;border:2px solid var(--uc);background:#fff;color:var(--uc);font-weight:800;cursor:pointer;font-family:inherit;font-size:.95rem}
 .upill.on{background:var(--uc);color:#fff}
 .upills{display:flex;gap:6px;flex-wrap:wrap}
-.uselect{display:none;width:100%;padding:10px 12px;border:1.5px solid var(--brand);border-radius:9px;font-family:inherit;font-size:1rem;font-weight:700;color:var(--brand);background:#fff}
-@media (max-width:640px){.upills{display:none}.uselect{display:block}}
+@media (max-width:640px){.upills{display:none}}
 .kp{border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:8px;background:#fff}
 .kp-h{font-weight:700;font-size:.96rem}
 .kp-b{margin-top:6px;font-size:.92rem;color:#374151;border-top:1px dashed var(--line);padding-top:6px}
@@ -135,7 +142,7 @@ th{color:var(--muted);font-weight:600;font-size:.83rem}
 </head>
 <body>
 <header>
-  <h1>📖 資通安全概論 陪讀系統</h1>
+  <h1>📖 資通安全概論</h1>
   <button id="menutoggle" onclick="navOpen=!navOpen;render()">☰ 選單</button>
   <nav id="nav"></nav>
 </header>
@@ -164,12 +171,22 @@ function ustate(id){return S.units[id]||(S.units[id]={read:false,best:null})}
 
 /* ============ 導覽 ============ */
 const TABS=[['dash','🏠 儀表板'],['read','📚 閱讀'],['notes','📌 重點'],['diff','🔀 差異'],['quiz','✏️ 測驗'],['review','🔁 複習'],['stats','📊 紀錄']];
-let cur='dash', readerUnit=1, quizSession=null, navOpen=false;
+let cur='dash', readerUnit=1, quizSession=null, navOpen=false, notesSubOpen=false;
 function nav(t){if(t!=='read'&&typeof tts!=='undefined'&&tts.playing)ttsStop();cur=t;navOpen=false;render()}
 function render(){
   const navEl=document.getElementById('nav');
-  navEl.innerHTML=TABS.map(([id,label])=>
-    `<button class="${cur===id?'active':''}" onclick="nav('${id}')">${label}</button>`).join('');
+  navEl.innerHTML=TABS.map(([id,label])=>{
+    if(id==='notes'){
+      let h=`<div class="navrow">
+        <button class="navtab ${cur===id?'active':''}" onclick="nav('${id}')">${label}</button>
+        <button class="navexp" title="展開單元" onclick="notesSubOpen=!notesSubOpen;render()">${notesSubOpen?'－':'＋'}</button>
+      </div>`;
+      if(notesSubOpen)
+        h+=BOOK.units.map(u=>`<button class="navsub ${u.id===notesUnit?'active':''}" onclick="notesUnit=${u.id};nav('notes')">單元 ${u.id}　${u.title}</button>`).join('');
+      return h;
+    }
+    return `<button class="${cur===id?'active':''}" onclick="nav('${id}')">${label}</button>`;
+  }).join('');
   navEl.className=navOpen?'open':'';
   const mt=document.getElementById('menutoggle');
   if(mt){const cl=(TABS.find(t=>t[0]===cur)||['','選單'])[1];mt.textContent=navOpen?'✕ 關閉':'☰ '+cl;}
@@ -370,8 +387,6 @@ function vNotes(){
   const pills=BOOK.units.map(u=>
     `<button class="upill ${u.id===notesUnit?'on':''}" style="--uc:${UCOLOR[u.id-1]}" title="${u.title}"
       onclick="notesUnit=${u.id};nav('notes')">${u.id}</button>`).join('');
-  const uSelect=`<select class="uselect" onchange="notesUnit=+this.value;nav('notes')">`+
-    BOOK.units.map(u=>`<option value="${u.id}" ${u.id===notesUnit?'selected':''}>單元 ${u.id}　${u.title}</option>`).join('')+`</select>`;
   const u=BOOK.units.find(x=>x.id===notesUnit), n=window.NOTES&&NOTES[notesUnit];
   let html=`<div class="card"><div class="row spread">
       <h2>📌 重點複習　單元 ${u.id}　${u.title}</h2>
@@ -382,7 +397,7 @@ function vNotes(){
         <label class="row" style="gap:6px;font-size:.9rem;cursor:pointer">
           <input type="checkbox" ${recallMode?'checked':''} onchange="recallMode=this.checked;nav('notes')">
           🧠 回想模式（先想再看）</label></div></div>
-    <div style="margin-top:10px"><div class="upills">${pills}</div>${uSelect}</div></div>`;
+    <div style="margin-top:10px"><div class="upills">${pills}</div></div></div>`;
   if(!n){
     html+=`<div class="card" style="text-align:center;padding:30px">
       <div style="font-size:1.6rem">🌱</div>
