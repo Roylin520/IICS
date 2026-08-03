@@ -170,7 +170,7 @@ function save(){localStorage.setItem(KEY,JSON.stringify(S))}
 function ustate(id){return S.units[id]||(S.units[id]={read:false,best:null})}
 
 /* ============ 導覽 ============ */
-const TABS=[['dash','🏠 儀表板'],['read','📚 閱讀'],['notes','📌 重點'],['diff','🔀 差異'],['quiz','✏️ 測驗'],['review','🔁 複習'],['stats','📊 紀錄']];
+const TABS=[['dash','🏠 儀表板'],['read','📚 閱讀'],['notes','📌 重點'],['diff','🔀 差異'],['quiz','✏️ 測驗'],['review','🔁 複習'],['stats','📊 記錄']];
 let cur='dash', readerUnit=1, quizSession=null, navOpen=false, notesSubOpen=false;
 function nav(t){if(t!=='read'&&typeof tts!=='undefined'&&tts.playing)ttsStop();cur=t;navOpen=false;render()}
 function render(){
@@ -718,30 +718,30 @@ function vReview(){
   return html;
 }
 
-/* ============ 紀錄 ============ */
+/* ============ 記錄 ============ */
 function vStats(){
-  let html=`<div class="card"><div class="row spread"><h2>📊 測驗紀錄</h2>
+  let html=`<div class="card"><div class="row spread"><h2>📊 測驗記錄</h2>
     <div class="row"><button class="ghost sm" onclick="expData()">匯出進度</button>
     <button class="ghost sm" onclick="document.getElementById('imp').click()">匯入進度</button>
     <input type="file" id="imp" accept=".json" style="display:none" onchange="impData(this)">
     <button class="ghost sm" style="color:var(--bad);border-color:var(--bad)" onclick="clearWrong()">清除錯題</button>
-    <button class="ghost sm" style="color:var(--bad);border-color:var(--bad)" onclick="clearAll()">清除全部紀錄</button></div></div>`;
-  if(!S.history.length)html+='<div class="muted">尚無測驗紀錄。</div>';
+    <button class="ghost sm" style="color:var(--bad);border-color:var(--bad)" onclick="clearAll()">清除全部記錄</button></div></div>`;
+  if(!S.history.length)html+='<div class="muted">尚無測驗記錄。</div>';
   else{
     html+='<table><tr><th>日期</th><th>單元</th><th>成績</th></tr>';
     for(const h of [...S.history].reverse())
       html+=`<tr><td>${h.date}</td><td>單元 ${h.uid}</td><td>${h.score}/${h.total}（${Math.round(h.score/h.total*100)}%）</td></tr>`;
     html+='</table>';
   }
-  return html+`</div><div class="card"><h3>⚠️ 資料說明</h3><div class="muted">進度存在這台電腦的瀏覽器（localStorage）。換電腦或清瀏覽器資料前，請先「匯出進度」備份。匯出的 JSON 也可以貼給 Claude 同步到 study/progress.md。</div></div>`;
+  return html+`</div><div class="card"><h3>⚠️ 資料說明</h3><div class="muted">進度存在這台電腦的瀏覽器（localStorage）。換電腦或清瀏覽器資料前，請先「匯出進度」備份。<br>📌 <b>「匯出／匯入」也包含「📌重點」裡『標記模式』的螢光筆標記</b>，換裝置可帶著走；惟若之後重點文字有更新，已標記處的位置可能對不準。</div></div>`;
 }
 function clearWrong(){
-  if(!S.wrong.length){alert('目前沒有錯題紀錄。');return;}
+  if(!S.wrong.length){alert('目前沒有錯題記錄。');return;}
   if(!confirm('確定清除「錯題清單」共 '+S.wrong.length+' 題？（測驗成績與單元進度保留）'))return;
   S.wrong=[];save();render();
 }
 function clearAll(){
-  if(!confirm('確定清除「全部紀錄」？包含測驗成績、錯題清單、各單元已讀/最佳成績，且無法復原。建議先「匯出進度」備份。'))return;
+  if(!confirm('確定清除「全部記錄」？包含測驗成績、錯題清單、各單元已讀/最佳成績，且無法復原。建議先「匯出進度」備份。'))return;
   S={units:{},wrong:[],history:[],log:[]};save();render();
 }
 function expData(){
