@@ -198,6 +198,7 @@ th{color:var(--muted);font-weight:600;font-size:.83rem}
 // 帶時間戳記載入資料檔，避免瀏覽器快取舊題庫/書本資料（本機伺服器，重載無感）
 document.write('<script src="data/units.js?v='+Date.now()+'"><\/script>');
 document.write('<script src="data/quiz.js?v='+Date.now()+'"><\/script>');
+document.write('<script src="data/quiz_renew.js?v='+Date.now()+'"><\/script>');
 document.write('<script src="data/notes.js?v='+Date.now()+'"><\/script>');
 document.write('<script src="data/notes_slide.js?v='+Date.now()+'"><\/script>');
 document.write('<script src="data/slide_toc.js?v='+Date.now()+'"><\/script>');
@@ -225,6 +226,9 @@ let S=normS(load());
 // ⚠ 本機編輯會蓋掉檔案內容：若 Claude 之後更新了 notes.js，該單元仍會顯示舊的本機版。
 //   因此這裡：①內容與檔案相同的「空編輯」直接清掉 ②真的有差異者記錄下來，於重點頁顯示提示條。
 window.NOTES_LOCAL={};   // NOTES_LOCAL[uid]=true 表示該單元目前顯示的是本機編輯版、非檔案版
+// 測驗(換證)：把 quiz_renew.js 併進 QUIZ，鍵值加前綴 R（R1～R9）。
+// 這樣作答、錯題清單、間隔複習、★ 標記、依單元練習全部沿用既有引擎，不必另寫一套。
+if(window.QUIZ&&window.QUIZ_RENEW)for(const u in QUIZ_RENEW)QUIZ['R'+u]=QUIZ_RENEW[u];
 if(window.NOTES){
   window.NOTES_ORIG=JSON.parse(JSON.stringify(NOTES));
   let dropped=false;
@@ -290,7 +294,7 @@ function save(){localStorage.setItem(KEY,JSON.stringify(S))}
 function ustate(id){return S.units[id]||(S.units[id]={read:false,best:null})}
 
 /* ============ 導覽 ============ */
-const TABS=[['dash','🏠 儀表板'],['read','📚 閱讀'],['notes','📌 重點'],['exam','🎯 歷史考題'],['cram','⚡ 快速記憶'],['quiz','✏️ 測驗'],['review','🔁 複習'],['stats','📊 記錄']];
+const TABS=[['dash','🏠 儀表板'],['read','📚 閱讀'],['notes','📌 重點'],['exam','🎯 歷史考題'],['cram','⚡ 快速記憶'],['quiz','✏️ 測驗'],['quiz2','📝 測驗(換證)'],['review','🔁 複習'],['stats','📊 記錄']];
 let cur='dash', readerUnit=1, quizSession=null, navOpen=false, notesSubOpen=false;
 let cramUnit=1, cramAll=false, cramMark=false, cramEdit=false;
 let examUnit=0, examMark=false;   // 🎯 歷史考題：examUnit=0 代表「全部單元」
@@ -326,6 +330,7 @@ function render(){
   else if(cur==='cram')m.innerHTML=vCram();
   else if(cur==='exam')m.innerHTML=vExam();
   else if(cur==='quiz')m.innerHTML=vQuiz();
+  else if(cur==='quiz2')m.innerHTML=vQuizR();
   else if(cur==='review')m.innerHTML=vReview();
   else m.innerHTML=vStats();
   if(cur==='notes'||cur==='cram'||cur==='exam')applyAllHighlights();   // 快速記憶（前綴 C）與歷史考題（前綴 E）吃同一套標記
@@ -1291,15 +1296,26 @@ addEventListener('scroll',()=>{
 function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 
 /* ============ 測驗引擎 ============ */
-function vQuiz(){
+/* ---- 單元代號：一般題庫＝數字 1～9；換證題庫＝字串 "R1"～"R9" ---- */
+const isR=uid=>String(uid).charAt(0)==='R';                      // 是否為換證題庫
+const uNum=uid=>String(uid).replace(/^R/,'');                    // 取單元數字
+const uLabel=uid=>'單元 '+uNum(uid)+(isR(uid)?'（換證）':'');       // 顯示用
+const uArg=uid=>typeof uid==='number'?String(uid):"'"+uid+"'";    // 塞進 onclick 的字面值
+function vQuiz(){return vQuizPick('')}
+function vQuizR(){return vQuizPick('R')}
+function vQuizPick(bank){
   if(quizSession)return vQuizQ();
-  let html='<div class="card"><h2>選擇要測驗的單元</h2><div class="muted" style="margin-bottom:10px">一次一題，答錯自動加入複習排程（+1、+3、+7、+14 天）。</div></div><div class="grid">';
+  const isRB=bank==='R';
+  let html=`<div class="card"><h2>${isRB?'📝 測驗(換證)：選擇要測驗的單元':'選擇要測驗的單元'}</h2>
+    <div class="muted" style="margin-bottom:10px">一次一題，答錯自動加入複習排程（+1、+3、+7、+14 天）。
+    ${isRB?'本題庫<b>全部為單選題</b>，依各單元「📌 重點（主線）」逐條命題並含情境題，與「✏️ 測驗」的題庫各自獨立、成績分開計算。'
+          :'題目含<b>單選與複選</b>，複選需全部選對。'}</div></div><div class="grid">`;
   for(const u of BOOK.units){
-    const has=!!(QUIZ[u.id]&&QUIZ[u.id].length), st=ustate(u.id);
+    const uid=bank+u.id, arr=QUIZ[uid]||[], has=arr.length>0, st=ustate(uid);
     html+=`<div class="card"><h3>單元 ${u.id}　${u.title}</h3>
-      <div class="muted">${has?QUIZ[u.id].length+' 題':'題庫尚未生成 — 回到 Claude 對話說「生成單元'+u.id+'題庫」'}
+      <div class="muted">${has?arr.length+' 題':'題庫尚未生成 — 回到 Claude 對話說「生成'+(isRB?'測驗(換證)':'')+'單元'+u.id+'題庫」'}
       ${st.best!==null?'　最佳成績 '+st.best+'%':''}</div>
-      ${has?`<button class="act sm" style="margin-top:8px" onclick="startQuiz(${u.id})">開始測驗</button>`:''}</div>`;
+      ${has?`<button class="act sm" style="margin-top:8px" onclick="startQuiz(${uArg(uid)})">開始測驗</button>`:''}</div>`;
   }
   return html+'</div>';
 }
@@ -1307,7 +1323,7 @@ function startQuiz(uid){
   const qs=QUIZ[uid].map((q,i)=>({uid,qi:i,q}));
   shuffle(qs);
   quizSession={mode:'quiz',uid,items:qs,idx:0,correct:0,answered:false,picks:[],results:[]};
-  cur='quiz';render();
+  cur=isR(uid)?'quiz2':'quiz';render();
 }
 function startReview(){
   const due=dueWrongs();
@@ -1345,17 +1361,23 @@ function drillSet(uid){
   return {src:rec?'test':'list',date:rec&&rec.date,total:rec&&rec.total,qis,base:base.length,stars:stars.length};
 }
 function drillCount(uid){return drillSet(uid).qis.length}
+// 有題庫的所有單元代號：一般 1～9 ＋ 換證 R1～R9
+function drillUnits(){
+  const a=BOOK.units.map(u=>String(u.id));
+  for(const u of BOOK.units)if((QUIZ['R'+u.id]||[]).length)a.push('R'+u.id);
+  return a;
+}
 // 單元錯題練習：把該單元最後一次完測的錯題整批再練一次，不受到期日限制，可重複練
 function startDrill(uid){
   pruneWrong();
-  const units=uid==='all'?BOOK.units.map(u=>String(u.id)):[String(uid)];
+  const units=uid==='all'?drillUnits():[String(uid)];
   const list=[];
   for(const u of units)for(const qi of drillSet(u).qis)list.push({uid:u,qi});
-  if(!list.length){alert(uid==='all'?'目前沒有可練習的錯題（先完成一次單元測驗吧）。':'單元 '+uid+' 目前沒有可練習的錯題。');return;}
+  if(!list.length){alert(uid==='all'?'目前沒有可練習的錯題（先完成一次單元測驗吧）。':uLabel(uid)+' 目前沒有可練習的錯題。');return;}
   const items=list.map(w=>({uid:w.uid,qi:w.qi,q:QUIZ[w.uid][w.qi],w}));
   shuffle(items);
   quizSession={mode:'drill',uid,items,idx:0,correct:0,answered:false,picks:[],results:[]};
-  cur='quiz';render();
+  cur=uid!=='all'&&isR(uid)?'quiz2':'quiz';render();
 }
 function vQuizQ(){
   const ss=quizSession;
@@ -1386,14 +1408,14 @@ function vQuizQ(){
       return `<button class="${cls}" ${ss.answered?'disabled':''} ${click}>${L[i]}. ${esc(o)}</button>`;
     }).join('');
     if(!ss.answered)html+=`<div style="margin-top:10px"><button class="act" ${ss.picks.length?'':'disabled'} onclick="answerMulti()">送出答案</button></div>`;
-    else html+=`<div class="expl">正解：${ansArr.map(i=>L[i]).join('、')}（虛線框＝應選未選）<br>📖 ${q.ref}　${esc(q.expl||'')}</div>`;
+    else html+=`<div class="expl">正解：${ansArr.map(i=>L[i]).join('、')}（虛線框＝應選未選）<br>📖 ${linkSlideRefs(q.ref)}　${esc(q.expl||'')}</div>`;
   }else{
     html+=q.opts.map((o,i)=>{
       let cls='opt',dis=ss.answered?'disabled':'';
       if(ss.answered){if(i===q.ans)cls+=ss.pick===i?' sel-ok':' reveal';else if(i===ss.pick)cls+=' sel-bad'}
       return `<button class="${cls}" ${dis} onclick="answerMC(${i})">${L[i]}. ${esc(o)}</button>`;
     }).join('');
-    if(ss.answered)html+=`<div class="expl">📖 ${q.ref}　${esc(q.expl||'')}</div>`;
+    if(ss.answered)html+=`<div class="expl">📖 ${linkSlideRefs(q.ref)}　${esc(q.expl||'')}</div>`;
   }
   if(ss.answered)html+=`<div style="margin-top:12px"><button class="act" onclick="nextQ()">下一題 →</button></div>`;
   return html+'</div>';
@@ -1437,8 +1459,8 @@ function record(it,ok){
 function nextQ(){const ss=quizSession;ss.idx++;ss.answered=false;ss.pick=null;ss.picks=[];render()}
 function sessLabel(ss){
   if(ss.mode==='review')return '🔁 錯題複習';
-  if(ss.mode==='drill')return ss.uid==='all'?'📚 錯題練習（全部單元）':'📚 單元 '+ss.uid+' 錯題練習';
-  return '單元 '+ss.uid+' 測驗';
+  if(ss.mode==='drill')return ss.uid==='all'?'📚 錯題練習（全部單元）':'📚 '+uLabel(ss.uid)+' 錯題練習';
+  return uLabel(ss.uid)+' 測驗';
 }
 function vQuizDone(){
   const ss=quizSession;
@@ -1458,11 +1480,11 @@ function vQuizDone(){
     <div style="margin:6px 0">${ss.correct} / ${ss.items.length} 題正確　${msg}</div>
     ${ss.mode==='drill'
       ? `<div class="muted">練習模式<b>不會</b>改動錯題清單與複習排程${wrongN?`（本輪答錯 ${wrongN} 題）`:''}；作答時按 ★ 可把題目長期留在這份練習清單裡。
-         這批題目固定是${dUid==='all'?'各單元':'單元 '+dUid+' '}<b>最後一次完測</b>的錯題，再完測一次該單元才會換新。</div>`
-      : wrongN?`<div class="muted">答錯的 ${wrongN} 題已加入複習排程（明天到期）${ss.mode==='quiz'?`；「📚 依單元練習錯題」的單元 ${ss.uid} 已更新為本次錯的 ${wrongN} 題`:''}</div>`
-        :(ss.mode==='quiz'?`<div class="muted">全對！「📚 依單元練習錯題」的單元 ${ss.uid} 已清空</div>`:'')}
+         這批題目固定是${dUid==='all'?'各單元':uLabel(dUid)+' '}<b>最後一次完測</b>的錯題，再完測一次該單元才會換新。</div>`
+      : wrongN?`<div class="muted">答錯的 ${wrongN} 題已加入複習排程（明天到期）${ss.mode==='quiz'?`；「📚 依單元練習錯題」的${uLabel(ss.uid)}已更新為本次錯的 ${wrongN} 題`:''}</div>`
+        :(ss.mode==='quiz'?`<div class="muted">全對！「📚 依單元練習錯題」的${uLabel(ss.uid)}已清空</div>`:'')}
     <div class="row" style="justify-content:center;margin-top:16px;flex-wrap:wrap">
-      ${ss.mode==='quiz'?`<button class="ghost" onclick="startQuiz(${ss.uid})">再測一次</button>`:''}
+      ${ss.mode==='quiz'?`<button class="ghost" onclick="startQuiz(${uArg(ss.uid)})">再測一次</button>`:''}
       ${ss.mode==='drill'?`<button class="act" onclick="startDrill(${typeof dUid==='number'?dUid:"'"+dUid+"'"})">🔁 再練一次（重新洗牌）</button>
         <button class="ghost" onclick="quizSession=null;nav('review')">回複習頁</button>`:''}
       <button class="${ss.mode==='drill'?'ghost':'act'}" onclick="quizSession=null;nav('dash')">回儀表板</button>
@@ -1481,23 +1503,26 @@ function vReview(){
   // 依單元重複練習錯題：來源＝該單元「最後一次完測」的錯題，與間隔複習排程完全脫鉤
   pruneWrong();
   let totalD=0, anyFallback=false;
-  let pills='';
-  for(const u of BOOK.units){
-    const d=drillSet(u.id), n=d.qis.length;
+  const pillFor=uid=>{
+    const d=drillSet(uid), n=d.qis.length, t=BOOK.units.find(x=>String(x.id)===uNum(uid));
     totalD+=n;
     if(d.src==='list'&&n)anyFallback=true;
     const tip=(d.src==='test'
       ? `${d.date} 完測 ${d.total} 題，錯 ${d.base} 題`
       : (d.base?'尚未完測過，暫時取自錯題清單（'+d.base+' 題）':'尚未完測，也沒有錯題記錄'))
       +(d.stars?`；另有 ★ 標記 ${d.stars} 題`:'');
-    pills+=`<button class="ghost sm" ${n?'':'disabled'} title="${esc(u.title)}｜${tip}"
-      onclick="startDrill(${u.id})">單元 ${u.id}（${n}${d.src==='list'&&n?' ＊':''}）</button>`;
-  }
+    return `<button class="ghost sm" ${n?'':'disabled'} title="${esc(t?t.title:'')}｜${tip}"
+      onclick="startDrill(${uArg(uid)})">單元 ${uNum(uid)}（${n}${d.src==='list'&&n?' ＊':''}）</button>`;
+  };
+  let pills=BOOK.units.map(u=>pillFor(u.id)).join('');
+  const rPills=drillUnits().filter(isR).map(pillFor).join('');
   html+=`<div class="card"><h3>📚 依單元練習錯題</h3>
     <div class="muted" style="font-size:.86rem;margin-bottom:10px">題目來源＝該單元<b>最後一次「完整測驗」答錯的題目</b>，加上你在作答時按 <b>★</b> 標記的題目，想練幾次就練幾次。
       <br>這裡<b>不套用</b>間隔重複規則（不看到期日、不累積連對、不會畢業移除），練習結果也不會改動上方的錯題清單與複習排程。
       <br>要換一批題目，就把該單元的測驗<b>再完整做一次</b>——完測結束時會自動用該次的錯題覆寫這裡。</div>
     <div class="row" style="flex-wrap:wrap;gap:6px">${pills}</div>
+    ${rPills?`<div class="muted" style="font-size:.82rem;margin-top:10px">📝 測驗(換證)</div>
+      <div class="row" style="flex-wrap:wrap;gap:6px">${rPills}</div>`:''}
     <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">
       <button class="act sm" ${totalD?'':'disabled'} onclick="startDrill('all')">📚 全部單元一起練（${totalD} 題）</button>
       <button class="ghost sm" ${starCount()?'':'disabled'} onclick="clearStars()">☆ 清除全部 ★ 標記（${starCount()} 題）</button>
@@ -1509,7 +1534,7 @@ function vReview(){
       <tr><th>到期日</th><th>單元</th><th>題目</th><th>連對</th></tr>`;
     for(const w of [...due,...future]){
       const q=QUIZ[w.uid]&&QUIZ[w.uid][w.qi];if(!q)continue;
-      html+=`<tr><td class="${w.due<=today()?'due':''}">${w.due}</td><td>單元${w.uid}</td>
+      html+=`<tr><td class="${w.due<=today()?'due':''}">${w.due}</td><td>${uLabel(w.uid)}</td>
         <td>${esc(q.q.slice(0,42))}…</td><td>${w.streak||0}/2</td></tr>`;
     }
     html+='</table></div>';
@@ -1531,7 +1556,7 @@ function vStats(){
   else{
     html+='<table><tr><th>日期</th><th>單元</th><th>成績</th></tr>';
     for(const h of [...S.history].reverse())
-      html+=`<tr><td>${h.date}</td><td>單元 ${h.uid}</td><td>${h.score}/${h.total}（${Math.round(h.score/h.total*100)}%）</td></tr>`;
+      html+=`<tr><td>${h.date}</td><td>${uLabel(h.uid)}</td><td>${h.score}/${h.total}（${Math.round(h.score/h.total*100)}%）</td></tr>`;
     html+='</table>';
   }
   return html+`</div><div class="card"><h3>⚠️ 資料說明</h3><div class="muted">進度存在這台電腦的瀏覽器（localStorage）。換電腦或清瀏覽器資料前，請先「匯出進度」備份。<br>📌 <b>「匯出／匯入」也包含「📌重點」裡『標記模式』的螢光筆底色與字樣調整（粗體／紅字／藍字／一般）</b>，換裝置可帶著走；惟若之後重點文字有更新，已標記處的位置可能對不準。<br>🗑️ <b>「清除全部記錄」只清測驗相關資料</b>，你的標記與網頁內編輯的重點會保留。</div></div>`;
