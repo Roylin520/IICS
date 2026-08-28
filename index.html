@@ -3,12 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-store">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>資通安全概論 — 陪讀系統</title>
 <style>
 :root{
   --bg:#f6f7fb; --card:#fff; --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb;
   --brand:#1d4ed8; --brand-soft:#dbeafe; --ok:#059669; --ok-soft:#d1fae5;
-  --bad:#dc2626; --bad-soft:#fee2e2; --warn:#d97706; --warn-soft:#fef3c7;
+  --bad:#b91c1c; --bad-soft:#fee2e2; --warn:#d97706; --warn-soft:#fef3c7;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"Microsoft JhengHei","Noto Sans TC",sans-serif;background:var(--bg);color:var(--ink);line-height:1.7}
@@ -48,6 +51,11 @@ button.act{background:var(--brand);color:#fff;border:none;padding:9px 18px;borde
 button.act:disabled{opacity:.4;cursor:default}
 button.ghost{background:#fff;color:var(--brand);border:1px solid var(--brand);padding:8px 16px;border-radius:8px;cursor:pointer;font-size:.92rem;font-family:inherit}
 button.sm{padding:4px 12px;font-size:.85rem}
+/* 長得像 ghost 鈕的連結（另開分頁用，可中鍵／Ctrl+點） */
+a.ghost{display:inline-block;background:#fff;color:var(--brand);border:1px solid var(--brand);border-radius:8px;
+  padding:8px 16px;font-size:.92rem;font-family:inherit;text-decoration:none;white-space:nowrap}
+a.ghost.sm{padding:4px 12px;font-size:.85rem}
+a.ghost:hover{background:var(--brand-soft)}
 .bar{height:8px;background:#eef0f4;border-radius:99px;overflow:hidden;margin:8px 0}
 .bar>div{height:100%;background:var(--brand);border-radius:99px;transition:width .3s}
 .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -65,42 +73,67 @@ button.sm{padding:4px 12px;font-size:.85rem}
 .bm-s .pg{color:var(--muted);font-size:.78rem;white-space:nowrap}
 .pdfwrap{padding:0;overflow:hidden}
 .pdfwrap iframe{display:block;width:100%;height:calc(100vh - 150px);border:none}
-/* 讀物選擇（教材原書 / 各天簡報）＋說明橫幅 */
+/* 收合左側章節 → 閱讀區佔滿寬度 */
+.reader.notoc{grid-template-columns:1fr}
+.reader.notoc>.toc{display:none}
+/* 讀物列（課程簡報）＋說明橫幅 */
 .docsel{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .docbtn{background:#fff;border:1px solid var(--line);color:var(--ink);padding:6px 12px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.88rem}
 .docbtn.on{background:var(--brand);color:#fff;border-color:var(--brand);font-weight:700}
-.readnote{background:var(--warn-soft);border:1px solid #fcd34d;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:.86rem;line-height:1.6}
-.readnote.slide{background:var(--brand-soft);border-color:#93c5fd}
-/* 章節列「教材已更新」標示 */
-.diffbadge{background:var(--bad);color:#fff;font-size:.68rem;font-weight:700;padding:1px 6px;border-radius:99px;margin-left:6px;white-space:nowrap}
-.diffrow{font-size:.8rem;color:var(--bad);background:var(--bad-soft);border:1px solid #fca5a5;border-radius:6px;padding:5px 8px;margin:4px 0 6px 24px;line-height:1.7}
-.diffrow .pgchip{display:inline-block;background:#fff;border:1px solid var(--bad);color:var(--bad);border-radius:5px;padding:0 7px;margin:2px 3px 0 0;cursor:pointer;font-weight:700}
-.diffrow .pgchip:hover{background:var(--bad);color:#fff}
-.diffrow .tonotes{cursor:pointer;text-decoration:underline;font-weight:700}
-/* 差異表分頁 */
-.difftbl{width:100%;border-collapse:collapse;font-size:.88rem}
-.difftbl th,.difftbl td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
-.difftbl thead th{background:#f3f4f6;font-size:.82rem;white-space:nowrap}
-.difftbl tbody tr:nth-child(even){background:#fafbff}
-.difftbl .dc-u{text-align:center}
-.difftbl .dc-badge{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;color:#fff;font-weight:800;font-size:.82rem}
-.difftbl .dc-old{color:var(--muted);text-decoration:line-through}
-.difftbl .dc-new{color:var(--bad);font-weight:700}
-.difftbl .dc-pg{white-space:nowrap;color:var(--brand);font-size:.82rem}
-.difftbl .dc-aff{white-space:nowrap;font-size:.82rem}
-.difftbl .dc-note{margin-top:4px;font-size:.8rem;color:#6b7280;line-height:1.5}
-.ttsbox{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:8px;padding:8px;margin-top:8px;background:#fafbff}
-.ttsbox select{width:100%;padding:4px 6px;border:1px solid var(--line);border-radius:6px;font-family:inherit;font-size:.82rem}
+/* 從重點跳到某張投影片時，章節欄上方的小返回鈕 */
+.backstart{display:block;width:100%;margin-bottom:6px;padding:5px 8px;border:1px solid #93c5fd;
+  background:var(--brand-soft);color:var(--brand);border-radius:7px;cursor:pointer;
+  font-family:inherit;font-size:.82rem;font-weight:700}
+.backstart:hover{background:var(--brand);color:#fff;border-color:var(--brand)}
+/* 簡報頁碼跳頁連結（重點內文中的「簡報 D-PP」） */
+.slideref{color:#7c3aed;font-weight:700;cursor:pointer;border-bottom:1px dashed #7c3aed;padding:0 1px}
+.slideref:hover{background:#7c3aed;color:#fff;border-bottom-color:transparent;border-radius:3px}
 /* notes 重點複習 */
 .upill{min-width:34px;height:34px;border-radius:9px;border:2px solid var(--uc);background:#fff;color:var(--uc);font-weight:800;cursor:pointer;font-family:inherit;font-size:.95rem}
 .upill.on{background:var(--uc);color:#fff}
 .upills{display:flex;gap:6px;flex-wrap:wrap}
+/* 重點頁「教材版／簡報版」來源切換 */
+.srctab{padding:6px 14px;border-radius:999px;border:1.5px solid var(--line);background:#fff;color:var(--muted);
+  font-weight:700;font-size:.9rem;cursor:pointer;font-family:inherit;white-space:nowrap}
+.srctab:hover{border-color:var(--brand);color:var(--brand)}
+.srctab.on{background:var(--brand);border-color:var(--brand);color:#fff}
 @media (max-width:640px){.upills{display:none}}
 .kp{border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:8px;background:#fff}
 .kp-h{font-weight:700;font-size:.96rem}
 .kp-b{margin-top:6px;font-size:.92rem;color:#374151;border-top:1px dashed var(--line);padding-top:6px}
 .kp-b .kpl{margin:1px 0;white-space:pre-wrap}
 .kp-b .kpl.ind{padding-left:1.5em}
+/* 出處（簡報頁碼）：由 fmtBody() 從內文首行抽出，改放卡片右下角 */
+.kp-b .kp-src{margin-top:8px;text-align:right;font-size:.8rem;color:var(--muted)}
+/* 重點內文表格：notes.js 用純文字「A | B | C」連續多行書寫，由 fmtBody() 轉成表格 */
+.kpt-w{overflow-x:auto;margin:6px 0}
+.kpt{border-collapse:collapse;width:100%;font-size:.9rem}
+.kpt th,.kpt td{border:1px solid var(--line);padding:5px 9px;text-align:left;vertical-align:top}
+.kpt th{background:var(--brand-soft);color:var(--brand);font-weight:700}
+.kpt tbody td.c0{font-weight:700;background:#fafafa}   /* 第 1 欄＝標籤欄。用 class 不用 :first-child：
+   第 1 欄被 rowspan 併掉的那幾列，第一個 <td> 會是第 2 欄，:first-child 會把它誤套成標籤欄樣式 */
+/* 文字相同的相鄰儲存格由 fmtBody() 併成一格（上下 rowspan／左右 colspan），置中比較好讀 */
+.kpt td[rowspan]{vertical-align:middle}
+.kpt th[colspan],.kpt td[colspan]{text-align:center}
+/* 只有「短標籤」才不換行；長敘述一律讓它折行，否則會把整張表撐爆（class 由 fmtBody() 依字數自動加） */
+.kpt .nw{white-space:nowrap}
+/* 首列全是「①②③…」＝一組並列項目排成的格狀清單，不是真表格：不套表頭與標籤欄的底色／粗體 */
+.kpt.plain thead th{background:transparent;color:inherit;font-weight:400}
+.kpt.plain tbody td.c0{background:transparent;font-weight:400}
+/* ⚡ 快速記憶表：檔案端純文字，「…」由 cramEmph() 包成 .ck 上色 */
+.cram .kp{border-left:3px solid var(--brand-soft);padding-left:10px;margin:14px 0}
+.cram .kp-h{font-size:1rem;color:var(--brand)}
+.cram .kpt{font-size:.88rem}
+.cram-no{display:inline-block;min-width:24px;height:24px;line-height:24px;border-radius:6px;color:#fff;text-align:center;font-size:.85rem;margin-right:8px}
+/* 🎯 歷史考題重點：版面沿用重點卡，另加小節出處列 */
+.exam .kp{border-left:3px solid var(--brand-soft);padding-left:10px;margin:14px 0}
+.exam .kp-h{font-size:1rem;color:var(--brand)}
+.kp-sec{font-size:.78rem;color:var(--muted);margin-bottom:2px}
+em.ck{font-style:normal;font-weight:700;color:#b91c1c}
+/* 重點編輯器 */
+.ed-h{width:100%;padding:7px 10px;border:1px solid var(--line);border-radius:7px;font-family:inherit;font-size:.95rem;font-weight:700;color:var(--ink);margin-bottom:6px}
+.ed-b{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;font-family:inherit;font-size:.9rem;line-height:1.7;color:#374151;resize:vertical;min-height:70px}
+.ed-h:focus,.ed-b:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 2px var(--brand-soft)}
 .kp.recall{cursor:pointer}
 .kp.recall .kp-b{display:none}
 .kp.recall.show .kp-b{display:block}
@@ -113,15 +146,25 @@ button.sm{padding:4px 12px;font-size:.85rem}
 .kp-b mark,.kp-b .hl{background:#fef08a;padding:0 2px;border-radius:3px}   /* 黃底螢光 */
 .kp-b .hl-g{background:#bbf7d0;padding:0 2px;border-radius:3px}            /* 綠底 */
 .kp-b .hl-r{background:#fecaca;padding:0 2px;border-radius:3px}           /* 紅底（陷阱/易錯） */
-.kp-b .c-r{color:#dc2626;font-weight:700}                                /* 紅字 */
-.kp-b .c-b{color:#2563eb;font-weight:700}                                /* 藍字 */
+.kp-b .c-r,.kp-h .c-r{color:#b91c1c;font-weight:700}                     /* 紅字（標題與內文皆適用） */
+.kp-b .c-b,.kp-h .c-b{color:#2563eb;font-weight:700}                     /* 藍字（標題與內文皆適用） */
 /* 互動式螢光筆（標記模式）使用者標記 */
 .uhl{border-radius:3px;padding:0 1px}
-.uhl-y{background:#fde68a}.uhl-g{background:#bbf7d0}.uhl-b{background:#bfdbfe}.uhl-p{background:#fbcfe8}
-.marking .kp-b{cursor:text}
-#hlbar{position:fixed;z-index:9999;display:none;gap:5px;padding:5px 7px;background:#1f2937;border-radius:9px;box-shadow:0 4px 14px rgba(0,0,0,.3)}
-#hlbar button{width:22px;height:22px;border:2px solid #fff;border-radius:50%;cursor:pointer;padding:0;font-size:.8rem;line-height:1}
+.uhl-y{background:#fde68a}.uhl-g{background:#bbf7d0}.uhl-b{background:#bfdbfe}.uhl-p{background:#fbcfe8}.uhl-k{background:#dcdfe4}
+/* 標記模式：使用者「字樣」覆蓋——可蓋掉重點原有的粗體／紅字／藍字（存 localStorage，不寫檔） */
+.kp-b .uf-b,.kp-h .uf-b{font-weight:800!important}                       /* 加粗（保留原本顏色） */
+.kp-b .uf-r,.kp-h .uf-r{color:#b91c1c!important;font-weight:800!important}   /* 紅字：與 em.ck（「」關鍵字）同色 */
+.kp-b .uf-l,.kp-h .uf-l{color:#2563eb!important;font-weight:800!important}
+.kp-b .uf-e,.kp-h .uf-e{color:#009100!important;font-weight:800!important}
+.kp-b .uf-n{font-weight:400!important;color:#374151!important}           /* 一般：取消粗體與顏色 */
+.kp-h .uf-n{font-weight:400!important;color:var(--ink)!important}
+.marking .kp-b,.marking .kp-h{cursor:text}
+#hlbar{position:fixed;z-index:9999;display:none;flex-direction:column;gap:4px;padding:5px 7px;background:#1f2937;border-radius:9px;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+#hlbar .hlrow{display:flex;gap:5px;align-items:center}
+#hlbar .hll{color:#d1d5db;font-size:.68rem;font-weight:700;width:1.5em;text-align:center;flex:none}
+#hlbar button{width:22px;height:22px;border:2px solid #fff;border-radius:50%;cursor:pointer;padding:0;font-size:.8rem;line-height:1;font-family:inherit}
 #hlbar button.er{background:#fff;color:#1f2937;font-weight:800;border-color:#9ca3af}
+#hlbar button.fx{background:#fff;color:#111827;font-weight:800;font-size:.74rem;border-color:#9ca3af}
 /* quiz */
 .opt{display:block;width:100%;text-align:left;background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:11px 14px;margin-bottom:8px;cursor:pointer;font-size:.97rem;font-family:inherit}
 .opt:hover{border-color:var(--brand)}
@@ -137,6 +180,9 @@ table{width:100%;border-collapse:collapse;font-size:.92rem}
 th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--line)}
 th{color:var(--muted);font-weight:600;font-size:.83rem}
 .due{color:var(--bad);font-weight:700}
+.starbtn{background:none;border:0;padding:2px 6px;font-size:1.5rem;line-height:1;cursor:pointer;color:#cbd5e1;border-radius:8px;transition:transform .1s,color .15s}
+.starbtn:hover{background:#f1f5f9;color:#f59e0b;transform:scale(1.1)}
+.starbtn.on{color:#f59e0b}
 @media(max-width:760px){.reader{grid-template-columns:1fr}.toc{position:static;max-height:none}}
 </style>
 </head>
@@ -153,26 +199,108 @@ th{color:var(--muted);font-weight:600;font-size:.83rem}
 document.write('<script src="data/units.js?v='+Date.now()+'"><\/script>');
 document.write('<script src="data/quiz.js?v='+Date.now()+'"><\/script>');
 document.write('<script src="data/notes.js?v='+Date.now()+'"><\/script>');
+document.write('<script src="data/notes_slide.js?v='+Date.now()+'"><\/script>');
+document.write('<script src="data/slide_toc.js?v='+Date.now()+'"><\/script>');
+document.write('<script src="data/cram.js?v='+Date.now()+'"><\/script>');
+document.write('<script src="data/exam.js?v='+Date.now()+'"><\/script>');
 </script>
 <script>
 /* ============ 狀態（localStorage） ============ */
 const KEY='iics-study-v1';
 const today=()=>new Date().toISOString().slice(0,10);
 const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)};
-let S=load();
-if(!S.hl)S.hl={};   // hl[hlid]=[{start,end,c}] 使用者螢光筆標記（hlid=「單元|小節|點序」）
+// hl[hlid]=[{start,end,c}] 螢光筆底色｜fmt[hlid]=[{start,end,f}] 字樣覆蓋 f: b粗體/r紅字/l藍字/n一般（可蓋掉重點原有的粗體與顏色）
+//   hlid＝「單元|小節|點序」（簡報版前綴 S），重點標題再加「|h」
+// notesEdit[unit]=sections 陣列（使用者在網頁「編輯模式」改過的重點；本機保存）
+// 題庫刪題後題目索引會前移，舊錯題記錄會指到別題（不會報錯，但複習到錯的題目）。
+// 每次刪題就把 QUIZ_REV 加 1，並在 REV_DROP 列出受影響的索引範圍，載入時清掉該範圍的舊記錄。
+// ⚠ 必須宣告在 normS() 首次呼叫之前，否則會踩到 const 的暫時性死區。
+const QUIZ_REV=2;
+const REV_DROP={                                // rev: [[單元, 起始qi, 結束qi], ...]
+  1:[['6',41,41],['8',20,25]],
+  2:[['4',7,44]],                               // v5：刪除單元4第8題，其後索引前移
+};
+let S=normS(load());
+// 保存原始重點（供「還原」），並套用本機編輯覆蓋
+// ⚠ 本機編輯會蓋掉檔案內容：若 Claude 之後更新了 notes.js，該單元仍會顯示舊的本機版。
+//   因此這裡：①內容與檔案相同的「空編輯」直接清掉 ②真的有差異者記錄下來，於重點頁顯示提示條。
+window.NOTES_LOCAL={};   // NOTES_LOCAL[uid]=true 表示該單元目前顯示的是本機編輯版、非檔案版
+if(window.NOTES){
+  window.NOTES_ORIG=JSON.parse(JSON.stringify(NOTES));
+  let dropped=false;
+  for(const uid in S.notesEdit){
+    if(!NOTES[uid]){ continue; }
+    if(JSON.stringify(S.notesEdit[uid])===JSON.stringify(NOTES_ORIG[uid].sections)){
+      delete S.notesEdit[uid]; dropped=true;      // 與檔案一模一樣＝無意義的殘留，清掉
+    }else{
+      NOTES[uid].sections=S.notesEdit[uid];
+      NOTES_LOCAL[uid]=true;
+    }
+  }
+  if(dropped) save();
+}
+// 快速記憶表同樣支援本機編輯覆蓋（⚡ 快速記憶 → ✍️ 編輯模式）
+window.CRAM_LOCAL={};    // CRAM_LOCAL[uid]=true 表示該單元目前顯示的是本機編輯版、非檔案版
+if(window.CRAM){
+  window.CRAM_ORIG=JSON.parse(JSON.stringify(CRAM));
+  let dropped=false;
+  for(const uid in S.cramEdit){
+    if(!CRAM[uid]) continue;
+    const title=(S.cramTitle||{})[uid];
+    if(JSON.stringify(S.cramEdit[uid])===JSON.stringify(CRAM_ORIG[uid].blocks)
+       &&(title==null||title===CRAM_ORIG[uid].title)){
+      delete S.cramEdit[uid]; delete S.cramTitle[uid]; dropped=true;   // 與檔案一模一樣＝無意義的殘留
+    }else{
+      CRAM[uid].blocks=S.cramEdit[uid];
+      if(title!=null)CRAM[uid].title=title;
+      CRAM_LOCAL[uid]=true;
+    }
+  }
+  if(dropped) save();
+}
+// 2026-08-15：標記校正改為「每次渲染時用文字內容重新定位」（見 healAllMarks），
+// 不再需要針對某一次改版寫死的一次性位移遷移（原 migrateMarks 已移除）。
+// 舊版留下的 s.markRev 欄位不再使用，留著不影響。
+function normS(s){   // 補齊缺欄位（舊版備份／匯入的檔案可能沒有 hl、fmt、notesEdit）
+  s=s||{};
+  s.units=s.units||{}; s.wrong=s.wrong||[]; s.history=s.history||[]; s.log=s.log||[];
+  s.hl=s.hl||{}; s.fmt=s.fmt||{}; s.notesEdit=s.notesEdit||{};
+  s.cramEdit=s.cramEdit||{}; s.cramTitle=s.cramTitle||{};   // 網頁「⚡ 快速記憶 → ✍️ 編輯模式」改過的區塊／單元名稱（本機保存）
+  s.lastWrong=s.lastWrong||{};   // lastWrong[單元]={date,total,qis:[題號]}＝該單元最後一次完測答錯的題目（供「依單元練習錯題」使用）
+  s.star=s.star||{};             // star[單元]=[題號]＝作答時按 ★ 手動加入練習的題目（不受完測覆寫影響）
+  return migrateWrong(s);
+}
+function migrateWrong(s){
+  const from=s.quizRev||0;
+  if(from>=QUIZ_REV)return s;
+  for(let r=from+1;r<=QUIZ_REV;r++){
+    (REV_DROP[r]||[]).forEach(([uid,lo,hi])=>{
+      s.wrong=s.wrong.filter(w=>!(String(w.uid)===uid&&w.qi>=lo&&w.qi<=hi));
+    });
+  }
+  s.quizRev=QUIZ_REV;
+  return s;
+}
 function load(){
   try{const s=JSON.parse(localStorage.getItem(KEY));if(s)return s}catch(e){}
-  return {units:{}, wrong:[], history:[], log:[], hl:{}};
+  return {units:{}, wrong:[], history:[], log:[], hl:{}, fmt:{}, lastWrong:{}, star:{}};
   // units[id]={read:bool, best:percent} ; wrong=[{uid,qi,due,streak}] ; history=[{date,uid,score,total}]
 }
 function save(){localStorage.setItem(KEY,JSON.stringify(S))}
 function ustate(id){return S.units[id]||(S.units[id]={read:false,best:null})}
 
 /* ============ 導覽 ============ */
-const TABS=[['dash','🏠 儀表板'],['read','📚 閱讀'],['notes','📌 重點'],['diff','🔀 差異'],['quiz','✏️ 測驗'],['review','🔁 複習'],['stats','📊 記錄']];
+const TABS=[['dash','🏠 儀表板'],['read','📚 閱讀'],['notes','📌 重點'],['exam','🎯 歷史考題'],['cram','⚡ 快速記憶'],['quiz','✏️ 測驗'],['review','🔁 複習'],['stats','📊 記錄']];
 let cur='dash', readerUnit=1, quizSession=null, navOpen=false, notesSubOpen=false;
-function nav(t){if(t!=='read'&&typeof tts!=='undefined'&&tts.playing)ttsStop();cur=t;navOpen=false;render()}
+let cramUnit=1, cramAll=false, cramMark=false, cramEdit=false;
+let examUnit=0, examMark=false;   // 🎯 歷史考題：examUnit=0 代表「全部單元」
+function nav(t){
+  cur=t;navOpen=false;render();
+}
+function navReadDefault(){
+  slideJump=null;
+  cur='read'; navOpen=false; render();
+}
 function render(){
   const navEl=document.getElementById('nav');
   navEl.innerHTML=TABS.map(([id,label])=>{
@@ -185,7 +313,7 @@ function render(){
         h+=BOOK.units.map(u=>`<button class="navsub ${u.id===notesUnit?'active':''}" onclick="notesUnit=${u.id};nav('notes')">單元 ${u.id}　${u.title}</button>`).join('');
       return h;
     }
-    return `<button class="${cur===id?'active':''}" onclick="nav('${id}')">${label}</button>`;
+    return `<button class="${cur===id?'active':''}" onclick="${id==='read'?'navReadDefault()':`nav('${id}')`}">${label}</button>`;
   }).join('');
   navEl.className=navOpen?'open':'';
   const mt=document.getElementById('menutoggle');
@@ -195,17 +323,23 @@ function render(){
   if(cur==='dash')m.innerHTML=vDash();
   else if(cur==='read')m.innerHTML=vRead();
   else if(cur==='notes')m.innerHTML=vNotes();
-  else if(cur==='diff')m.innerHTML=vDiff();
+  else if(cur==='cram')m.innerHTML=vCram();
+  else if(cur==='exam')m.innerHTML=vExam();
   else if(cur==='quiz')m.innerHTML=vQuiz();
   else if(cur==='review')m.innerHTML=vReview();
   else m.innerHTML=vStats();
-  if(cur==='read')jumpRestore();
-  if(cur==='notes'){applyAllHighlights();document.body.classList.toggle('marking',markMode);}
-  else document.body.classList.remove('marking');
+  if(cur==='notes'||cur==='cram'||cur==='exam')applyAllHighlights();   // 快速記憶（前綴 C）與歷史考題（前綴 E）吃同一套標記
+  document.body.classList.toggle('marking',markOn());
 }
 
 /* ============ 儀表板 ============ */
-function dueWrongs(){return S.wrong.filter(w=>w.due<=today())}
+// 題庫增修後，指向已不存在題目的舊錯題記錄要清掉，否則複習模式會取到 undefined
+function pruneWrong(){
+  const n=S.wrong.length;
+  S.wrong=S.wrong.filter(w=>QUIZ[w.uid]&&QUIZ[w.uid][w.qi]);
+  if(S.wrong.length!==n)save();
+}
+function dueWrongs(){pruneWrong();return S.wrong.filter(w=>w.due<=today())}
 function vDash(){
   const readN=BOOK.units.filter(u=>ustate(u.id).read).length;
   const quizN=BOOK.units.filter(u=>ustate(u.id).best!==null).length;
@@ -238,50 +372,11 @@ function vDash(){
 }
 function toggleRead(id){const st=ustate(id);st.read=!st.read;save();render()}
 
-/* ============ 差異表（簡報 11504／現行 vs 教材 11501） ============ */
-// 逐項：簡報（較新課程簡報 11504／現行法規）對教材原書（11501）所做的修正。重點與題庫皆已採「新值」為主、教材舊值降為紅字附註。
-const DIFFS=[
-  {u:1, item:'施行細則 修正日期', old:'110.8.23', neo:'115.1.5', page:'p.24', aff:'重點'},
-  {u:1, item:'責任等級分級辦法 修正日期', old:'110.8.23', neo:'115.1.7', page:'p.24', aff:'重點'},
-  {u:1, item:'個人資料保護法 修正日期', old:'112.5.31', neo:'114.11.11', page:'p.24 / p.59', aff:'重點'},
-  {u:2, item:'責任等級 核定／提交週期', old:'每 2 年', neo:'每 3 年', page:'p.48', aff:'重點＋題庫', note:'分級辦法§3 修正。⚠ 官方自我評量範例曾以「每 3 年」為誘答（正解每 2 年）；若考題照舊教材則答每 2 年。'},
-  {u:2, item:'資安法子法 部數', old:'6 部', neo:'8 部', page:'p.41', aff:'重點＋題庫', note:'新增「危害國家資通安全產品審查辦法」「國家資通安全會報設置辦法」；「獎懲辦法」正名為「公務機關所屬人員辦理資通安全事項作業辦法」。'},
-  {u:2, item:'人工智慧基本法（新法）', old:'（教材無）', neo:'115/1/14 公布施行', page:'補充', aff:'重點＋題庫', note:'主管機關國科會；七大原則；政府使用 AI 須風險評估＋內控。'},
-  {u:4, item:'防護基準 控制措施總數', old:'171 項（高78／中58／普35）', neo:'170 項（高75／中55／普40）', page:'p.98', aff:'重點＋題庫', note:'分級辦法附表十修正。招牌考點，亦於單元 5 逐項展開。'},
-  {u:4, item:'識別與鑑別 子類數', old:'5 子類', neo:'3 子類', page:'p.98', aff:'重點', note:'「內部／非內部使用者」合併為「使用者之識別與鑑別」（另二＝身分驗證管理、鑑別資訊保護）。'},
-  {u:4, item:'資安治理成熟度評估 對象', old:'僅公務機關', neo:'公務機關及關鍵基礎設施提供者', page:'p.122', aff:'重點＋題庫'},
-  {u:7, item:'OWASP TOP 10 版本', old:'2021 版', neo:'2025 版', page:'p.248', aff:'重點＋題庫', note:'A03 軟體供應鏈失效、A09 記錄與告警失效、A10 特殊情況處理不當等（順序與名稱調整）。'},
-  {u:7, item:'資安健診 檢視項目', old:'5 類', neo:'6 項', page:'p.270', aff:'重點＋題庫', note:'新增「核心資通系統資料庫安全檢視」。'},
-  {u:9, item:'通報應變演練辦法 條號（通報作業規範）', old:'§9 公務／§15 非公務', neo:'§4', page:'p.340', aff:'重點', note:'辦法 115/1/5 整部重編號。'},
-  {u:9, item:'通報應變演練辦法 條號（應變作業規範）', old:'§10 公務／§16 非公務', neo:'§5', page:'p.341', aff:'重點'},
-];
-function vDiff(){
-  const rows=DIFFS.map(d=>`<tr>
-    <td class="dc-u"><span class="dc-badge" style="background:${UCOLOR[d.u-1]}">${d.u}</span></td>
-    <td>${d.item}${d.note?`<div class="dc-note">${d.note}</div>`:''}</td>
-    <td class="dc-old">${d.old}</td>
-    <td class="dc-new">${d.neo}</td>
-    <td class="dc-pg">${d.page}</td>
-    <td class="dc-aff">${d.aff}</td>
-  </tr>`).join('');
-  const nUnits=new Set(DIFFS.map(d=>d.u)).size;
-  return `<div class="card">
-    <h2>🔀 教材 vs 較新簡報 差異表</h2>
-    <p class="muted" style="margin:6px 0 10px">簡報（11504／現行法規）對教材原書（11501）的修正共 <b>${DIFFS.length}</b> 項，橫跨 <b>${nUnits}</b> 個單元。重點與題庫皆已採「<b>現行新值</b>」為主答案、教材舊值保留為紅字附註。</p>
-    <div class="readnote" style="margin-bottom:12px">⚠ 重要：本系統依「新法為主」設定答案。<b>若你的職能考試是綁教材（11501）出題，招牌考點（如防護基準 171 項、責任等級每 2 年）正解可能仍是教材舊值</b>——請以官方最新自我評量測驗再確認。</div>
-    <div style="overflow-x:auto">
-    <table class="difftbl">
-      <thead><tr><th>單元</th><th>項目</th><th>教材 11501（原）</th><th>現行 11504（採用）</th><th>書頁</th><th>影響</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table></div>
-    <p class="muted" style="margin-top:10px">另有多處「補充內容」（綠底，如單元 6 各工具適用對象、單元 1 CIA 記憶例）為簡報加值、非教材衝突，直接見各單元 📌重點。教材原文（book.pdf、units.js）與題庫干擾選項一律未動。</p>
-  </div>`;
-}
-
-/* ============ 閱讀器（PDF 電子書＋章節書籤） ============ */
-const PDF_OFFSET=2; // PDF 頁 = 書頁 + 2
+/* ============ 閱讀器（課程簡報＋章節書籤） ============ */
 const UCOLOR=['#1d4ed8','#0891b2','#059669','#d97706','#dc2626','#7c3aed','#db2777','#475569','#b45309'];
-let jumpPage=null, pdfMode=true, curPage=null, readDoc='book';
+let slideJump=null;   // 閱讀頁只讀課程簡報（教材原書已於 2026-08-27 移除）
+// 版面：tocOpen＝左側章節是否展開
+let tocOpen=true;
 // 每個單元對應的較新課程簡報 PDF 與該單元起始投影片頁（讀者以左側章節選單元即可）
 const UNIT_SLIDE={
   1:{f:'slide_day1.pdf',p:7},  2:{f:'slide_day1.pdf',p:20},
@@ -290,158 +385,701 @@ const UNIT_SLIDE={
   7:{f:'slide_day3.pdf',p:2},  8:{f:'slide_day3.pdf',p:88},
   9:{f:'slide_day3.pdf',p:112},
 };
-// 找出某單元「教材已更新」的重點（附註含版本號 11501/11504 或紅底警示者），回傳頁碼清單
-function unitDiffs(uid){
-  const n=window.NOTES&&NOTES[String(uid)]; if(!n)return [];
-  const out=[], seen=new Set();
-  for(const sec of n.sections)for(const pt of sec.points){
-    if(!/1150[14]|hl-r/.test(pt.b))continue;
-    const m=pt.h.match(/p\.(\d+)/);
-    const pg=m?+m[1]:sec.page;
-    if(!seen.has(pg)){seen.add(pg);out.push(pg);}
+// 由簡報頁反推所屬單元（取同一份 PDF 中，起始頁不超過該頁的最大者）
+function unitOfSlide(d,p){
+  let best=null;
+  for(const uid of Object.keys(UNIT_SLIDE)){
+    const sd=UNIT_SLIDE[uid];
+    if(sd.f!=='slide_day'+d+'.pdf')continue;
+    if(p>=sd.p && (best===null || sd.p>UNIT_SLIDE[best].p)) best=uid;
   }
-  return out.sort((a,b)=>a-b);
+  return best===null?null:+best;
+}
+// 重點內文的簡報連結一律「另開分頁」，不離開正在讀的重點。
+// 用真的 <a target="_blank">（而非 window.open）：不會被彈出視窗阻擋，也支援中鍵／Ctrl+點。
+function slideHref(d,p){return `slide_day${d}.pdf#page=${p}&zoom=page-width`}
+// 在 App 內切到閱讀頁的該張投影片（閱讀頁左側章節、重點頁的簡報頁碼連結用）
+function gotoSlide(d,p){
+  slideJump={d:+d,p:+p};
+  const uid=unitOfSlide(+d,+p); if(uid)readerUnit=uid;
+  cur='read'; render();
+}
+// 主線小節（如 2.1）→ 對應的簡報小節（2-1）起始投影片頁；資料取自 slide_toc.js
+const SEC_SLIDE_FIX={'4.8':'4-7'};   // 書 4.8「證照及職能訓練證書」在簡報是併在 4-7 認知與訓練內
+// 投影片頁的手動修正：簡報 1-28 標題誤植為「2-2 資通安全管理法(7/9)」（其實仍屬 2-1 的 9 張），
+// 導致自動抓到的 2-2 起始頁變成 28；真正的「2-2 相關子法」自簡報 1-31 開始。
+const SEC_SLIDE_PAGE={'2|2.2':31};
+function slideOfSection(unit,secNo){
+  const st=window.SLIDE_TOC&&SLIDE_TOC[unit]; if(!st)return null;
+  const want=SEC_SLIDE_FIX[secNo]||String(secNo).replace('.','-');
+  const s=st.sections.find(x=>x.no===want);
+  if(!s)return null;
+  const fix=SEC_SLIDE_PAGE[unit+'|'+secNo];
+  return {day:st.day,p:fix||s.p,no:s.no,title:s.title};
+}
+// 把內文中的「簡報 1-13」「簡報 3-107～3-109」「day2 p.4」轉成可點的跳頁連結
+function linkSlideRefs(s){
+  const a=(m,d,p)=>`<a class="slideref" href="${slideHref(d,p)}" target="_blank" rel="noopener"
+    onclick="event.stopPropagation()" title="另開分頁看第 ${d} 天簡報第 ${p} 頁">${m}</a>`;
+  return String(s)
+    // 「簡報 D-PP」及其後以／～、, 串接的同類頁碼
+    .replace(/簡報\s*[1-3]-\d{1,3}(?:\s*[／\/～~、,]\s*[1-3]-\d{1,3})*/g,
+      run=>run.replace(/([1-3])-(\d{1,3})/g,(m,d,p)=>a(m,d,p)))
+    // 「day2 p.4」形式
+    .replace(/day\s*([1-3])\s*p\.(\d{1,3})/g,(m,d,p)=>a(m,d,p));
 }
 function vRead(){
   const u=BOOK.units.find(x=>x.id===readerUnit);
-  if(curPage===null)curPage=u.sections[0].page;
-  const isBook = readDoc==='book';
-  // 讀物選擇列（教材原書 / 課程簡報，簡報以左側章節選單元）
+  // 工具列：閱讀頁自 2026-08-27 起只讀課程簡報（11504），教材原書與讀物標籤皆已移除
   const sel=`<div class="docsel">
-    <button class="docbtn ${isBook?'on':''}" onclick="readDoc='book';nav('read')">📖 教材原書</button>
-    <button class="docbtn ${!isBook?'on':''}" onclick="readDoc='slide';nav('read')">📊 課程簡報（較新）</button></div>`;
-  // 說明橫幅
-  const notice = isBook
-    ? `<div class="readnote">📖 這是<b>原始教材電子書</b>。部分法規／數字已依較新課程簡報更新——左側章節有 <span style="color:#dc2626">⚠ 更新</span> 標記的單元即有差異，點開見更新頁碼，新值見 <b>📌重點</b> 紅字；上方可切「📊 課程簡報」對照。</div>`
-    : `<div class="readnote slide">📊 <b>較新課程簡報</b>（目前：單元 ${readerUnit} ${u.title}）。<b>點左側章節即切換對應單元的簡報</b>；與教材原書並存供對照。</div>`;
-  let toc=`<div class="row spread" style="margin-bottom:4px">
-    ${isBook?`<button class="ghost sm" onclick="pdfMode=!pdfMode;nav('read')">${pdfMode?'切換文字版':'切換 PDF 版'}</button>`:'<span class="muted" style="font-size:.82rem">👈 點章節切換單元簡報</span>'}
-    <button class="ghost sm" onclick="toggleRead(${u.id})">${ustate(u.id).read?'✓ 已讀':'標為已讀'}</button></div>
-    ${isBook?`<div id="ttsbox" class="ttsbox">${ttsBoxHTML()}</div>`:''}`;
+    <button class="docbtn" title="把左側章節收起來，閱讀區變寬" onclick="tocOpen=!tocOpen;nav('read')">${tocOpen?'◀ 收合章節':'▶ 展開章節'}</button></div>`;
+  // 說明橫幅已於 2026-08-27 移除；只在「從重點跳到某張投影片」時，於章節欄上方留一顆小返回鈕
+  const toc=`${slideJump?`<button class="backstart" onclick="slideJump=null;nav('read')" title="回到單元 ${readerUnit} 的起始投影片">↩ 回本單元起始頁</button>`:''}
+    <div class="row spread" style="margin-bottom:4px">
+    <span class="muted" style="font-size:.82rem">👈 點單元切換簡報、點小節直接跳該張</span>
+    <button class="ghost sm" onclick="toggleRead(${u.id})">${ustate(u.id).read?'✓ 已讀':'標為已讀'}</button></div>`
+    +tocUnits();
+  const sd=UNIT_SLIDE[readerUnit]||UNIT_SLIDE[1];
+  const f=slideJump?('slide_day'+slideJump.d+'.pdf'):sd.f;
+  const pg=slideJump?slideJump.p:sd.p;
+  const body=`<div class="card pdfwrap"><iframe id="pdfframe" src="${f}#page=${pg}&zoom=page-width"></iframe></div>`;
+  return `${sel}<div class="reader${tocOpen?'':' notoc'}"><div class="card toc">${toc}</div>${body}</div>`;
+}
+// 左側章節清單（單元＋目前單元的小節）
+function tocUnits(){
+  let toc='';
   for(const uu of BOOK.units){
     const c=UCOLOR[uu.id-1];
-    const diffs=unitDiffs(uu.id);
-    const badge=diffs.length?`<span class="diffbadge">⚠ 更新 ${diffs.length}</span>`:'';
     toc+=`<div class="bm ${uu.id===readerUnit?'open':''}" style="--bc:${c}" onclick="openUnit(${uu.id})">
-      <span class="bm-no" style="background:${c}">${uu.id}</span><span>${uu.title}</span>${badge}</div>`;
-    if(uu.id===readerUnit && isBook){
-      if(diffs.length)
-        toc+=`<div class="diffrow">⚠ 教材已更新處（PDF 為原值，新值見 <span class="tonotes" onclick="notesUnit=${uu.id};nav('notes')">📌重點紅字</span>）：`
-          +diffs.map(p=>`<span class="pgchip" onclick="goPage(${p})">p.${p}</span>`).join('')+`</div>`;
-      toc+=uu.sections.map(s=>`<div class="bm-s ${s.page===curPage?'cur':''}" onclick="goPage(${s.page})">
-        <span>${s.no} ${s.title}</span><span class="pg">p.${s.page}</span></div>`).join('');
+      <span class="bm-no" style="background:${c}">${uu.id}</span><span>${uu.title}</span></div>`;
+    if(uu.id===readerUnit){
+      // 小節取自 slide_toc.js（由 build_slide_toc.py 掃 slide_text 產生），點了直接跳該張投影片
+      const st=window.SLIDE_TOC&&SLIDE_TOC[uu.id];
+      if(st&&st.sections.length){
+        const nowP=slideJump?slideJump.p:(UNIT_SLIDE[uu.id]||{}).p;
+        let curNo=null;
+        for(const s of st.sections)if(s.p<=nowP)curNo=s.no;   // 目前停在哪一小節（起始頁不超過現在這頁的最後一個）
+        toc+=st.sections.map(s=>`<div class="bm-s ${s.no===curNo?'cur':''}" onclick="gotoSlide(${st.day},${s.p})">
+          <span>${s.no} ${s.title}</span><span class="pg">p.${s.p}</span></div>`).join('');
+      }else{
+        toc+=`<div class="bm-s muted" style="font-size:.8rem">（本單元簡報未建小節索引，可重跑 build_slide_toc.py）</div>`;
+      }
     }
   }
-  let body;
-  if(!isBook){
-    const sd=UNIT_SLIDE[readerUnit]||UNIT_SLIDE[1];
-    body=`<div class="card pdfwrap"><iframe id="pdfframe" src="${sd.f}#page=${sd.p}&zoom=page-width"></iframe></div>`;
-  }else if(pdfMode){
-    body=`<div class="card pdfwrap"><iframe id="pdfframe" src="book.pdf#page=${curPage+PDF_OFFSET}&zoom=page-width"></iframe></div>`;
-  }else{
-    body=`<div class="card"><h2 style="margin-bottom:10px">單元 ${u.id}　${u.title}</h2>`;
-    for(const pg of u.content){
-      if(!pg.paras.length)continue;
-      body+=`<div class="page-tag" id="pg${pg.p}">書頁 p.${pg.p}</div><div class="ptext">`
-        +pg.paras.map(t=>`<p class="${/^[¼h]|^\(\d+\)/.test(t)?'bullet':''}">${esc(t)}</p>`).join('')+'</div>';
-    }
-    body+='</div>';
-  }
-  return `${sel}${notice}<div class="reader"><div class="card toc">${toc}</div>${body}</div>`;
+  return toc;
 }
 function openUnit(id){
-  if(tts.playing)ttsStop();
-  readerUnit=id;
-  curPage=BOOK.units.find(u=>u.id===id).sections[0].page;
-  if(pdfMode)nav('read');else{jumpPage=curPage;nav('read')}
+  readerUnit=id; slideJump=null;
+  nav('read');
 }
-function goPage(p){
-  if(tts.playing)ttsStop();
-  curPage=p;
-  if(pdfMode)nav('read'); // 重繪：書籤目前位置標記更新，iframe src 帶入新頁碼
-  else{jumpPage=p;nav('read')}
-}
-function jumpTo(p){curPage=p;jumpPage=p;nav('read')}
-function jumpRestore(){if(!pdfMode&&jumpPage){const el=document.getElementById('pg'+jumpPage);if(el)el.scrollIntoView({behavior:'smooth'});jumpPage=null}}
-
 /* ============ 重點複習 ============ */
-let notesUnit=1, recallMode=false, markMode=false, curSel=null;
+let notesUnit=1, recallMode=false, markMode=false, curSel=null, editMode=false;
+// 主線重點自 2026-08-08 起本身就是簡報版，「🖥️ 簡報對照」切換鈕已移除，notesSrc 固定為 'book'。
+// （notes_slide.js 與相關程式碼保留，之後若要恢復對照頁再把切換鈕加回來即可。）
+let notesSrc='book';
+// 取得目前來源的單元重點資料；簡報版無資料時回傳 null（由 vNotes 顯示提示卡）
+function curNotes(uid){
+  return notesSrc==='slide'
+    ? (window.NOTES_SLIDE && NOTES_SLIDE[uid]) || null
+    : (window.NOTES && NOTES[uid]) || null;
+}
 // 將重點內容逐行渲染：「標籤：」（行尾為冒號）為標頭齊頭，其下項目縮排一個字；
 // 行內「標籤：內容」或一般敘述句維持齊頭。
 function fmtBody(b){
   b=b.replace(/。\s*§/g,'。\n§');                       // 條文摘要：每個 §條文 自成一行
   const lines=b.split('\n');
+  // 內文首行若以「簡報 X-XX」（可多個）開頭＝出處標註，抽出來改放卡片右下角；
+  // 首行若在出處之後還有正文，正文留在原位。非首行提到的簡報頁碼是內文引用，不動。
+  let src='';
+  const sm=lines[0].match(/^((?:簡報\s*\d+-\d+(?:\s*[、，,]\s*)?)+)。?\s*/);
+  if(sm){
+    src=sm[1].replace(/[、，,\s]+$/,'');
+    lines[0]=lines[0].slice(sm[0].length);
+    if(!lines[0].trim()) lines.shift();
+  }
   const isHeader=l=>/：$/.test(l);                       // 行尾冒號＝清單標頭
   const isTopLabel=l=>/^[^：＝（）「」『』\n]{1,16}：/.test(l); // 行內標籤＋內容＝頂層
+  const isRow=l=>l.includes('|');                        // 半形直線分欄（全形｜不算，仍是一般文字）
   let inList=false, out='';
-  for(const l of lines){
+  for(let i=0;i<lines.length;i++){
+    const l=lines[i];
+    // 連續 2 行以上含「|」＝表格，首行為表頭
+    if(isRow(l)&&i+1<lines.length&&isRow(lines[i+1])){
+      const rows=[];
+      while(i<lines.length&&isRow(lines[i])) rows.push(lines[i++].split('|').map(c=>c.trim()));
+      i--;
+      // 儲存格內的換行（四條規則，一律由渲染時處理，資料檔不要自己寫 <br>）：
+      //   ①編輯模式在格內手動打「反斜線＋n」即換行（表格一行＝一列，不能按 Enter）
+      //   ②「①②③」式條列有 2 項以上時，每項自動各自換行
+      //   ③句號「。」後面還有字時自動換行（句號保留；句尾的不斷行）
+      //   ④分號「；」「;」一律「拿掉符號」並換行（2026-08-24 使用者要求）
+      // 先全部轉成佔位符 U+0001，最後再一次收斂成 <br>，避免規則重疊產生連續空行。
+      const cellHTML=c=>{
+        let s=String(c);
+        s=s.replace(/\s*\\n\s*/g,'\u0001');                      // ① 手動換行標記
+        s=s.replace(/\s*[；;]\s*/g,'\u0001');                     // ④ 分號：去掉符號並換行
+        s=s.replace(/。\s*(?=\S)/g,'。\u0001');                   // ③ 句號：保留符號並換行
+        if((s.match(/[①-⑳]/g)||[]).length>=2)
+          s=s.replace(/\s*([①-⑳])/g,'\u0001$1');                  // ② 條列自動換行
+        s=linkSlideRefs(s);
+        return s.replace(/\u0001+/g,'<br>').replace(/^(?:<br>)+|(?:<br>)+$/g,'');
+      };
+      const cell=(c,t,rs,cs,ci)=>{
+        const k=[]; if(c.length<=8)k.push('nw'); if(ci===0)k.push('c0');   // c0＝真正的第 1 欄（標籤欄樣式靠它，不靠 :first-child）
+        return `<${t}${k.length?' class="'+k.join(' ')+'"':''}${rs>1?' rowspan="'+rs+'"':''}${cs>1?' colspan="'+cs+'"':''}>${cellHTML(c)}</${t}>`;
+      };
+      // 文字完全相同的相鄰儲存格自動合併，先左右（colspan）再上下（rowspan）：
+      //   ・左右＝同一列相鄰且文字相同（2026-08-26 新增；表頭列也適用）。
+      //     但「✔／－」這類單一字元的格子不做左右合併，否則 A/B/C 分級表會失去對欄，
+      //     且 C 級的「－」會跟同為「－」的備註欄黏在一起。
+      const hOK=t=>String(t).trim().length>1;             // 長度 1 的符號格不左右合併
+      //   ・上下＝同一欄相鄰且文字相同，免得像「① 人員定義與適任性查核」這種
+      //     分組標籤在每一列重複出現；需左右寬度一致才併，否則表格會歪掉。
+      //     第 2 欄以後只有在左邊那一欄也被「上下」併掉時才跟著併，避免不相干的列被誤併。
+      // hid：0＝照常輸出、1＝被左邊的格吃掉（colspan）、2＝被上面的格吃掉（rowspan）
+      // 首列每一格都以「①②③…」開頭＝並列清單排成的格子，沒有表頭也沒有標籤欄 → 全部畫成素表
+      const plain=rows[0].length>1&&rows[0].every(c=>/^[①-⑳]/.test(String(c).trim()));
+      const hd=rows[0], hcs=hd.map(()=>1), hhid=hd.map(()=>0);
+      for(let c=0;c<hd.length;c++){
+        if(hhid[c]) continue;
+        if(!hOK(hd[c])) continue;
+        for(let k=c+1;k<hd.length&&hd[k]===hd[c];k++){ hhid[k]=1; hcs[c]++; }
+      }
+      const body=rows.slice(1);
+      const cs=body.map(r=>r.map(()=>1)), rs=body.map(r=>r.map(()=>1)), hid=body.map(r=>r.map(()=>0));
+      for(let r=0;r<body.length;r++)                       // ① 左右合併
+        for(let c=0;c<body[r].length;c++){
+          if(hid[r][c]||!hOK(body[r][c])) continue;
+          for(let k=c+1;k<body[r].length&&body[r][k]===body[r][c];k++){ hid[r][k]=1; cs[r][c]++; }
+        }
+      for(let c=0;c<(body[0]||[]).length;c++)              // ② 上下合併
+        for(let r=0;r<body.length;r++){
+          if(body[r][c]===undefined||hid[r][c]) continue;
+          for(let k=r+1;k<body.length&&body[k][c]===body[r][c]&&!hid[k][c]
+                        &&cs[k][c]===cs[r][c]&&(c===0||hid[k][c-1]===2);k++){
+            hid[k][c]=2; rs[r][c]++;
+          }
+        }
+      out+='<div class="kpt-w"><table class="kpt'+(plain?' plain':'')+'"><thead><tr>'
+        +hd.map((c,ci)=>hhid[ci]?'':cell(c,'th',1,hcs[ci],ci)).join('')+'</tr></thead><tbody>'
+        +body.map((r,ri)=>'<tr>'+r.map((c,ci)=>hid[ri][ci]?'':cell(c,'td',rs[ri][ci],cs[ri][ci],ci)).join('')+'</tr>').join('')
+        +'</tbody></table></div>';
+      inList=false; continue;
+    }
     let cls='kpl';
     if(isHeader(l)) inList=true;
     else if(isTopLabel(l)) inList=false;
     else if(inList) cls='kpl ind';
-    out+=`<div class="${cls}">${l}</div>`;   // 內文允許寫 HTML（標色/底色），不跳脫
+    out+=`<div class="${cls}">${linkSlideRefs(l)}</div>`;   // 內文允許寫 HTML（標色/底色），不跳脫；簡報頁碼轉為跳頁連結
   }
-  return out;
+  return out+(src?`<div class="kp-src">${linkSlideRefs(src)}</div>`:'');
+}
+/* ============ ⚡ 快速記憶表（考前 1 小時掃讀） ============ */
+// 檔案端一律純文字；「…」自動上色，強調不寫進 cram.js
+function cramEmph(h){return h.replace(/「([^」]{1,40})」/g,'<em class="ck">「$1」</em>')}
+function cramUnitHTML(id){
+  const c=(window.CRAM||{})[id];
+  if(!c) return `<div class="card" style="text-align:center;padding:26px">
+    <div style="font-size:1.5rem">🌱</div><div>單元 ${id} 的快速記憶表尚未生成</div>
+    <div class="muted" style="margin-top:6px">回 Claude 對話說「<b>生成單元${id}快速記憶表</b>」。</div></div>`;
+  let h=`<div class="card cram"><div class="sec-head">
+      <h3><span class="cram-no" style="background:${UCOLOR[id-1]}">${id}</span>${c.title}</h3>
+      <a class="ghost sm" onclick="notesUnit=${id};nav('notes')" style="cursor:pointer">📌 看完整重點</a></div>`;
+  c.blocks.forEach((b,i)=>{
+    const hid=`C${id}|${i}`;   // 標記用 hlid：快速記憶前綴 C，「單元|區塊序」，標題再加 |h
+    h+=`<div class="kp"><div class="kp-h" data-hlid="${hid}|h">${b.h}</div><div class="kp-b" data-hlid="${hid}">${cramEmph(fmtBody(b.b))}</div></div>`;
+  });
+  return h+'</div>';
+}
+function vCram(){
+  const done=BOOK.units.filter(u=>(window.CRAM||{})[u.id]).length;
+  const pills=BOOK.units.map(u=>
+    `<button class="upill ${!cramAll&&u.id===cramUnit?'on':''}" style="--uc:${UCOLOR[u.id-1]}" title="${u.title}"
+      onclick="cramAll=false;cramUnit=${u.id};nav('cram')">${u.id}</button>`).join('');
+  let html=`<div class="card"><div class="row spread">
+      <h2>⚡ 快速記憶表</h2>
+      <div class="row" style="gap:14px;flex-wrap:wrap">
+        <label class="row" style="gap:6px;font-size:.9rem;cursor:pointer">
+          <input type="checkbox" ${cramAll?'checked':''} ${cramEdit?'disabled':''} onchange="cramAll=this.checked;nav('cram')">
+          📖 全書連續（1→9 一次掃完）</label>
+        <label class="row" style="gap:6px;font-size:.9rem;cursor:pointer">
+          <input type="checkbox" ${cramMark?'checked':''} onchange="cramMark=this.checked;if(cramMark)cramEdit=false;hideBar();nav('cram')">
+          ✏️ 標記模式（選字上色／改字樣）</label>
+        <label class="row" style="gap:6px;font-size:.9rem;cursor:pointer">
+          <input type="checkbox" ${cramEdit?'checked':''} onchange="cramEdit=this.checked;if(cramEdit){cramMark=false;cramAll=false;}hideBar();nav('cram')">
+          ✍️ 編輯模式</label></div></div>
+    <div class="row" style="gap:8px;margin-top:10px">
+      <span class="muted" style="font-size:.82rem">考前 1 小時掃讀用。內容抽自各單元「📌 重點（主線）」，
+      只留法條關鍵字、數字、易混對照與陷阱——<b>不是</b>拿來取代重點頁，而是最後一輪快速複查。
+      「」括住的是關鍵字。目前已備 <b>${done}/9</b> 個單元。</span></div>
+    <div style="margin-top:10px"><div class="upills">${pills}</div>
+      ${cramEdit?'':`<button class="ghost sm" style="margin-top:8px" onclick="cramAll=!cramAll;nav('cram')">${cramAll?'← 回到單一單元':'📖 切換為全書連續'}</button>`}</div></div>`;
+  if(cramMark) html+=markCard();
+  html+=cramLocalBanner();
+  if(cramEdit) return html+vCramEdit(cramUnit);
+  html+=(cramAll?BOOK.units.map(u=>cramUnitHTML(u.id)):[cramUnitHTML(cramUnit)]).join('');
+  html+=`<div class="card muted" style="font-size:.85rem">掃完這一輪還有時間，就到「🔁 複習 → 📚 依單元練習錯題」把最後一次完測答錯的題目再刷一遍。</div>`;
+  return html;
+}
+// 本機編輯版正在覆蓋 cram.js → 提示並提供一鍵改用檔案版
+function cramLocalUnits(){return Object.keys(window.CRAM_LOCAL||{}).map(Number).sort((a,b)=>a-b)}
+function cramLocalBanner(){
+  const us=cramLocalUnits();
+  if(!us.length)return '';
+  if(!cramAll&&!us.includes(cramUnit))return '';
+  return `<div class="card" style="background:#fef3c7;border-color:#f59e0b">
+    <div class="row spread" style="flex-wrap:wrap;gap:8px">
+      <div><b>⚠ 快速記憶表有 ${us.length} 個單元顯示的是「你在本機編輯過的版本」，不是最新檔案版。</b>
+        <div class="muted" style="font-size:.85rem;margin-top:4px">受影響單元：${us.join('、')}。
+          Claude 之後對 <code>web/data/cram.js</code> 的修訂<b>不會</b>出現在這些單元。</div></div>
+      <div class="row" style="gap:6px;flex-wrap:wrap">
+        ${us.includes(cramUnit)?`<button class="act sm" onclick="cramRevert(${cramUnit})">↩️ 單元 ${cramUnit} 改用檔案版</button>`:''}
+        ${us.length>1?`<button class="act sm" style="background:var(--bad)" onclick="cramRevertAll()">↩️ 全部改用檔案版（${us.length}）</button>`:''}
+      </div></div></div>`;
+}
+/* ============ 快速記憶表編輯器（⚡ 編輯模式） ============ */
+function vCramEdit(id){
+  const c=(window.CRAM||{})[id];
+  if(!c) return `<div class="card" style="text-align:center;padding:26px">
+    <div style="font-size:1.5rem">🌱</div><div>單元 ${id} 的快速記憶表尚未生成，沒有東西可以編輯</div>
+    <div class="muted" style="margin-top:6px">回 Claude 對話說「<b>生成單元${id}快速記憶表</b>」，或先切到其他單元。</div></div>`;
+  let h=`<div class="card" style="background:#fffbeb;border-color:#fcd34d">
+    <div class="row spread" style="flex-wrap:wrap;gap:8px"><b>✍️ 編輯模式（⚡ 快速記憶　單元 ${id}）</b>
+      <div class="row" style="gap:6px">
+        <button class="act sm" onclick="cramSaveFile()">💾 儲存到檔案</button>
+        <button class="ghost sm" onclick="cramCopy(${id})">📋 複製程式碼</button>
+        <button class="ghost sm" onclick="cramRevert(${id})">↩️ 還原此單元</button></div></div>
+    <div class="muted" style="font-size:.82rem;margin-top:6px;line-height:1.8">直接在下方打字，<b>按 Enter 就換行</b>。<br>
+      • <b>即時存在這台瀏覽器</b>：更換不同電腦使用時，可用「📊 記錄」頁的<b>匯出／匯入</b>功能帶著走。<br>
+      • <b>💾 儲存到檔案</b>＝直接寫回 <code>web/data/cram.js</code>，並自動同步 <code>study/cram/unit${id}.md</code>
+      （需執行 <code>python web/save_server.py</code> 啟動網頁；若用一般 http.server 或雙擊開啟則無效，請改按「📋 複製程式碼」貼給 Claude）。<br>
+      <b>內容請寫純文字</b>：快速記憶表<b>不使用粗體、紅／藍字，也不使用背景色</b>。要強調就用「」把關鍵字括起來，網頁會自動上色；
+      要自己畫重點請關掉編輯模式、改開「✏️ 標記模式」（底色＋字樣，存這台瀏覽器）。<br>
+      <b>表格</b>：一行＝一列，用半形 <code>|</code> 分欄，連續兩行以上才會變成表格；<b>同一格內要換行請打反斜線＋n</b>（不能按 Enter，按了會變成新的一列）。
+      格內若有 2 個以上的 <code>①②③</code>、有句號或分號，會自動換行、不必自己加。</div></div>`;
+  h+=`<div class="card cram"><div class="sec-head">
+      <h3><span class="cram-no" style="background:${UCOLOR[id-1]}">${id}</span>單元名稱與區塊</h3>
+      <button class="ghost sm" onclick="cramAdd(${id})">＋ 新增區塊</button></div>
+    <input class="ed-h" value="${escA(c.title)}" placeholder="單元名稱" oninput="cramSetTitle(${id},this.value)">`;
+  c.blocks.forEach((b,i)=>{
+    const rows=Math.max(3,(String(b.b).match(/\n/g)||[]).length+2);
+    h+=`<div class="kp" style="background:#fcfcfd">
+      <input class="ed-h" value="${escA(b.h)}" placeholder="區塊標題（如「① 逐字背：…」）" oninput="cramSet('h',${id},${i},this.value)">
+      <textarea class="ed-b" rows="${rows}" placeholder="內容（Enter 換行；a | b | c 連續兩行以上＝表格）" oninput="cramSet('b',${id},${i},this.value)">${esc(String(b.b))}</textarea>
+      <div class="row" style="justify-content:flex-end;gap:6px;margin-top:4px">
+        <button class="ghost sm" onclick="cramMove(${id},${i},-1)" ${i?'':'disabled'} title="與上一個區塊對調">▲ 上移</button>
+        <button class="ghost sm" onclick="cramMove(${id},${i},1)" ${i<c.blocks.length-1?'':'disabled'} title="與下一個區塊對調">▼ 下移</button>
+        <button class="ghost sm" style="color:var(--bad);border-color:var(--bad)" onclick="cramDel(${id},${i})">🗑️ 刪除此區塊</button></div></div>`;
+  });
+  h+='</div>';
+  h+=`<div class="card muted" style="font-size:.82rem">💡 改好後：關掉「✍️ 編輯模式」即可看到套用後的排版。
+    <b>「💾 儲存到檔案」會同時寫回 cram.js 與 study/cram/unit${id}.md（兩邊自動同步）</b>——需用 <code>python web/save_server.py</code> 啟動網頁才生效。</div>`;
+  return h;
+}
+function cramTouch(unit){S.cramEdit[unit]=CRAM[unit].blocks;S.cramTitle[unit]=CRAM[unit].title;save()}
+function cramSet(field,unit,bi,val){
+  const c=CRAM[unit]; if(!c)return;
+  c.blocks[bi][field]=val;
+  cramTouch(unit);                          // 即時存本機，不重繪（避免游標跳掉）
+}
+function cramSetTitle(unit,val){
+  const c=CRAM[unit]; if(!c)return;
+  c.title=val; cramTouch(unit);
+}
+function cramAdd(unit){
+  CRAM[unit].blocks.push({h:"新區塊標題",b:"內容…"});
+  cramTouch(unit); nav('cram');
+}
+function cramDel(unit,bi){
+  if(!confirm('刪除這個區塊？'))return;
+  CRAM[unit].blocks.splice(bi,1);
+  cramTouch(unit); nav('cram');
+}
+function cramMove(unit,bi,d){
+  const a=CRAM[unit].blocks, j=bi+d;
+  if(j<0||j>=a.length)return;
+  const t=a[bi]; a[bi]=a[j]; a[j]=t;
+  cramTouch(unit); nav('cram');
+}
+function cramRevert(unit){
+  if(!confirm('改用「最新檔案版」快速記憶表？\n\n你在本機對單元 '+unit+' 的編輯將被清除（不影響其他單元、不影響螢光筆標記）。'))return;
+  CRAM[unit]=JSON.parse(JSON.stringify(CRAM_ORIG[unit]));
+  delete S.cramEdit[unit]; delete S.cramTitle[unit];
+  if(window.CRAM_LOCAL) delete CRAM_LOCAL[unit];
+  save(); nav('cram');
+}
+function cramRevertAll(){
+  const us=cramLocalUnits();
+  if(!us.length){alert('目前沒有任何單元被本機編輯版蓋著，你看到的都是最新檔案版。');return;}
+  if(!confirm('全部改用「最新檔案版」快速記憶表？\n\n受影響單元：'+us.join('、')+'（共 '+us.length+' 個）\n'
+    +'你在本機對這些單元的編輯將被清除，無法復原。\n\n不影響：螢光筆標記與字樣、測驗成績、複習進度。'))return;
+  for(const u of us){
+    if(window.CRAM_ORIG&&CRAM_ORIG[u])CRAM[u]=JSON.parse(JSON.stringify(CRAM_ORIG[u]));
+    delete S.cramEdit[u]; delete S.cramTitle[u];
+    delete CRAM_LOCAL[u];
+  }
+  save(); nav('cram');
+  alert('已全部改用最新檔案版（單元 '+us.join('、')+'）。');
+}
+function cramSaveFile(){
+  const ids=Object.keys(S.cramEdit||{});
+  const editedIds=ids.length?ids:[String(cramUnit)];
+  const units=editedIds.map(id=>({id:+id}));
+  fetch('/save/cram',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cram:CRAM,units})})
+    .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+    .then(d=>{if(d.ok){alert('✅ 已寫入 web/data/cram.js（'+d.bytes+' 位元組）\n並同步 study/cram/unit'+(d.mdSynced||[]).join('、unit')+'.md！'
+      +(d.mdError?'\n\n⚠ md 同步有問題：'+d.mdError:'')+'\n重新整理即為最新內容。');}else{throw new Error(d.error||'unknown');}})
+    .catch(e=>alert('無法直接存檔（'+e.message+'）。\n\n請改用「python web/save_server.py」啟動網頁（不是 http.server，也不是雙擊 index.html），存檔功能才會生效；\n或先按「📋 複製程式碼」貼給 Claude 幫你更新。'));
+}
+function cramCopy(unit){
+  const code='  "'+unit+'": '+JSON.stringify(CRAM[unit],null,2)+',';
+  const done=()=>alert('已複製「單元 '+unit+'」的 cram.js 程式碼！\n\n貼給 Claude 幫你更新（會同步 md 並驗證），或自行貼進 web/data/cram.js 取代該單元區塊。');
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(code).then(done).catch(()=>prompt('請手動複製以下程式碼：',code));
+  }else{ prompt('請手動複製以下程式碼：',code); }
+}
+/* ============ 🎯 歷史考題重點（歷屆考題出現過的重點，原文複製自 notes.js） ============ */
+// 資料＝web/data/exam.js，由 python web/build_exam.py 從 notes.js 依標題原文複製產生。
+function examCount(id){return (((window.EXAM||{})[id]||{}).points||[]).length}
+function examTotal(){return Object.keys(window.EXAM||{}).reduce((n,k)=>n+examCount(k),0)}
+function examUnitHTML(id){
+  const e=(window.EXAM||{})[id];
+  if(!e)return `<div class="card" style="text-align:center;padding:26px">
+    <div style="font-size:1.5rem">🌱</div><div>單元 ${id} 目前沒有列入歷史考題重點</div>
+    <div class="muted" style="margin-top:6px">要加進來就跟 Claude 說「<b>歷史考題重點加上單元${id}的某某重點</b>」。</div></div>`;
+  let h=`<div class="card exam"><div class="sec-head">
+      <h3><span class="cram-no" style="background:${UCOLOR[id-1]}">${id}</span>${e.title}
+        <span class="muted" style="font-weight:400;font-size:.85rem">（${e.points.length} 條）</span></h3>
+      <a class="ghost sm" onclick="notesUnit=${id};nav('notes')" style="cursor:pointer">📌 看完整重點</a></div>`;
+  e.points.forEach((p,i)=>{
+    const hid=`E${id}|${i}`;   // 標記用 hlid：歷史考題前綴 E，「單元|序」，標題再加 |h
+    h+=`<div class="kp">
+      <div class="kp-sec">${p.sec}　${p.secTitle}</div>
+      <div class="kp-h" data-hlid="${hid}|h">${p.h}</div>
+      <div class="kp-b" data-hlid="${hid}">${fmtBody(p.b)}</div></div>`;
+  });
+  return h+'</div>';
+}
+function vExam(){
+  const ids=Object.keys(window.EXAM||{}).map(Number).sort((a,b)=>a-b);
+  const pills=`<button class="upill ${examUnit?'':'on'}" style="--uc:#475569;padding:0 10px" onclick="examUnit=0;nav('exam')">全部</button>`
+    +BOOK.units.map(u=>`<button class="upill ${u.id===examUnit?'on':''}" style="--uc:${UCOLOR[u.id-1]}${examCount(u.id)?'':';opacity:.35'}"
+        title="${u.title}（${examCount(u.id)} 條）" onclick="examUnit=${u.id};nav('exam')">${u.id}</button>`).join('');
+  let html=`<div class="card"><div class="row spread">
+      <h2>🎯 歷史考題重點<span class="muted" style="font-weight:400;font-size:.85rem">　115.8.27(換證)</span></h2>
+      <label class="row" style="gap:6px;font-size:.9rem;cursor:pointer">
+        <input type="checkbox" ${examMark?'checked':''} onchange="examMark=this.checked;hideBar();nav('exam')">
+        ✏️ 標記模式（選字上色／改字樣）</label></div>
+    <div class="row" style="gap:8px;margin-top:10px">
+      <span class="muted" style="font-size:.82rem">歷屆考題實際出現過的重點，內容<b>原文複製</b>自「📌 重點（主線）」，
+        共 <b>${examTotal()}</b> 條、涵蓋 <b>${ids.length}</b> 個單元。考前把這幾條先讀熟。
+        清單要增刪就跟 Claude 說（改 <code>web/build_exam.py</code> 的 PICKS 後重跑，內文會自動重抓最新的重點）。</span></div>
+    <div style="margin-top:10px"><div class="upills">${pills}</div>
+      ${examUnit?`<button class="ghost sm" style="margin-top:8px" onclick="examUnit=0;nav('exam')">← 回到全部單元</button>`:''}</div></div>`;
+  if(examMark) html+=markCard();
+  if(!ids.length) return html+`<div class="card" style="text-align:center;padding:30px">
+    <div style="font-size:1.6rem">🌱</div><div>尚未建立歷史考題重點</div>
+    <div class="muted" style="margin-top:6px">執行 <code>python web/build_exam.py</code> 產生 <code>web/data/exam.js</code>。</div></div>`;
+  html+=(examUnit?[examUnit]:ids).map(examUnitHTML).join('');
+  html+=`<div class="card muted" style="font-size:.85rem">這些是考古題打過的地方，讀完建議到「✏️ 測驗」把對應單元再考一輪；
+    要看該重點的前後文，按各單元右上角的「📌 看完整重點」。</div>`;
+  return html;
 }
 function vNotes(){
   const pills=BOOK.units.map(u=>
     `<button class="upill ${u.id===notesUnit?'on':''}" style="--uc:${UCOLOR[u.id-1]}" title="${u.title}"
       onclick="notesUnit=${u.id};nav('notes')">${u.id}</button>`).join('');
-  const u=BOOK.units.find(x=>x.id===notesUnit), n=window.NOTES&&NOTES[notesUnit];
+  const u=BOOK.units.find(x=>x.id===notesUnit), isSlide=notesSrc==='slide', n=curNotes(notesUnit);
   let html=`<div class="card"><div class="row spread">
       <h2>📌 重點複習　單元 ${u.id}　${u.title}</h2>
       <div class="row" style="gap:14px">
         <label class="row" style="gap:6px;font-size:.9rem;cursor:pointer">
-          <input type="checkbox" ${markMode?'checked':''} onchange="markMode=this.checked;hideBar();nav('notes')">
-          ✏️ 標記模式（選字上色）</label>
+          <input type="checkbox" ${markMode?'checked':''} onchange="markMode=this.checked;if(markMode)editMode=false;hideBar();nav('notes')">
+          ✏️ 標記模式（選字上色／改字樣）</label>
         <label class="row" style="gap:6px;font-size:.9rem;cursor:pointer">
-          <input type="checkbox" ${recallMode?'checked':''} onchange="recallMode=this.checked;nav('notes')">
-          🧠 回想模式（先想再看）</label></div></div>
+          <input type="checkbox" ${recallMode?'checked':''} onchange="recallMode=this.checked;editMode=false;nav('notes')">
+          🧠 回想模式（先想再看）</label>
+        ${isSlide?'':`<label class="row" style="gap:6px;font-size:.9rem;cursor:pointer">
+          <input type="checkbox" ${editMode?'checked':''} onchange="editMode=this.checked;markMode=false;recallMode=false;hideBar();nav('notes')">
+          ✍️ 編輯模式</label>`}</div></div>
+    <div class="row" style="gap:8px;margin-top:10px">
+      <span class="muted" style="font-size:.82rem"><b>依課程簡報（11504）逐張整理</b>，法規一律採<b>現行值</b>；教材舊值只留在「🔀 差異」頁。
+      標題標 <b>（教材補充）</b>者為簡報沒有、教材才有的內容，標 <b>（教材補充_內容重疊）</b>者與前面的簡報版說法重複，可快速略過。
+      內文為純文字，要標重點請開「✏️ 標記模式」自己標。</span></div>
     <div style="margin-top:10px"><div class="upills">${pills}</div></div></div>`;
+  if(markMode) html+=markCard();
   if(!n){
     html+=`<div class="card" style="text-align:center;padding:30px">
       <div style="font-size:1.6rem">🌱</div>
-      <div>本單元重點尚未生成</div>
-      <div class="muted" style="margin-top:6px">回到 Claude 對話說「<b>生成單元${notesUnit}重點</b>」，整理好會自動出現在這裡。</div></div>`;
+      <div>本單元${isSlide?'的<b>簡報對照</b>':'重點'}尚未生成</div>
+      <div class="muted" style="margin-top:6px">${isSlide
+        ?`簡報對照只是輔助，主線重點請看「📖 重點（主線）」。需要時回 Claude 對話說「<b>生成單元${notesUnit}簡報重點</b>」。`
+        :`回到 Claude 對話說「<b>生成單元${notesUnit}重點</b>」，整理好會自動出現在這裡。`}</div></div>`;
     return html;
   }
+  // 本機編輯版正在覆蓋檔案版 → 明確告知，並提供一鍵改用最新檔案版
+  if(!isSlide && window.NOTES_LOCAL && NOTES_LOCAL[notesUnit]){
+    const us=localUnits();
+    html+=`<div class="card" style="background:#fef3c7;border-color:#f59e0b">
+      <div class="row spread" style="flex-wrap:wrap;gap:8px">
+        <div><b>⚠ 本單元顯示的是「你在本機編輯過的版本」，不是最新檔案版。</b>
+          <div class="muted" style="font-size:.85rem;margin-top:4px">
+            Claude 之後對 <code>web/data/notes.js</code> 的修訂<b>不會</b>出現在這裡。${us.length>1
+              ?`目前被本機編輯版蓋著的有 <b>${us.length}</b> 個單元：${us.join('、')}。`:''}</div></div>
+        <div class="row" style="gap:6px;flex-wrap:wrap">
+          <button class="act sm" onclick="noteRevert(${notesUnit})">↩️ 本單元改用檔案版</button>
+          ${us.length>1?`<button class="act sm" style="background:var(--bad)" onclick="noteRevertAll()">↩️ 全部改用檔案版（${us.length}）</button>`:''}
+        </div></div></div>`;
+  }
+  if(editMode&&!isSlide) return html+vNotesEdit(n);
   for(const sec of n.sections){
+    // 主線不再提供「翻到教材原書」的連結（2026-08-08 使用者要求：已不看教材原書）；
+    // 改成跳到「對應小節的簡報」（資料來自 slide_toc.js）。書頁仍寫在每條重點標題（p.XX｜…）供對照紙本。
+    // 主線不再於小節標題右上角放「簡報 D-PP」按鈕（2026-08-14 使用者要求）：
+    // 出處已改由每條重點卡片右下角的 .kp-src 標示，且該處頁碼本身就是可點的跳頁連結。
+    // 簡報對照模式保留此按鈕——該模式的重點標題（簡報 D-PP｜小標）未經 linkSlideRefs 處理，
+    // 拿掉會失去唯一的跳頁入口。
+    const jump=isSlide
+      ? `<a class="ghost sm" href="${slideHref(n.day,sec.slide)}" target="_blank" rel="noopener"
+             title="另開分頁看這一張">🖥️ 簡報 ${n.day}-${sec.slide} ↗</a>`
+      : '';
     html+=`<div class="card"><div class="sec-head">
-        <h3>${sec.no}　${sec.title}</h3>
-        <button class="ghost sm" onclick="gotoBook(${notesUnit},${sec.page})">📖 翻到原文 p.${sec.page}</button></div>`;
+        <h3>${sec.no}　${sec.title}</h3>${jump}</div>`;
     sec.points.forEach((p,i)=>{
-      html+=`<div class="kp ${recallMode?'recall':''}" ${recallMode?`onclick="this.classList.toggle('show')"`:''}>
-        <div class="kp-h">${p.h}</div><div class="kp-b" data-hlid="${notesUnit}|${sec.no}|${i}">${fmtBody(p.b)}</div></div>`;
+      const hid=`${isSlide?'S':''}${notesUnit}|${sec.no}|${i}`;
+      html+=`<div class="kp ${recallMode?'recall':''}" ${recallMode?`onclick="if(getSelection().isCollapsed)this.classList.toggle('show')"`:''}>
+        <div class="kp-h" data-hlid="${hid}|h">${p.h}</div><div class="kp-b" data-hlid="${hid}">${fmtBody(p.b)}</div></div>`;
     });
     html+='</div>';
   }
-  html+=`<div class="card muted" style="font-size:.85rem">⭐＝測驗常考點。看完重點建議直接到「✏️ 測驗」考一輪，答錯會自動進複習排程。</div>`;
+  html+=`<div class="card muted" style="font-size:.85rem">⭐＝測驗常考點（⭐⭐⭐＝教材補充中最關鍵者）。
+    看完重點建議直接到「✏️ 測驗」考一輪，答錯會自動進複習排程。</div>`;
   return html;
 }
-function gotoBook(uid,page){if(tts.playing)ttsStop();readerUnit=uid;curPage=page;pdfMode=true;cur='read';render()}
+/* ============ 重點編輯器（編輯模式） ============ */
+const escA=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function vNotesEdit(n){
+  let h=`<div class="card" style="background:#fffbeb;border-color:#fcd34d">
+    <div class="row spread" style="flex-wrap:wrap;gap:8px"><b>✍️ 編輯模式（單元 ${notesUnit}）</b>
+      <div class="row" style="gap:6px">
+        <button class="act sm" onclick="noteSaveFile()">💾 儲存到檔案</button>
+        <button class="ghost sm" onclick="noteCopy(${notesUnit})">📋 複製程式碼</button>
+        <button class="ghost sm" onclick="noteRevert(${notesUnit})">↩️ 還原此單元</button></div></div>
+    <div class="muted" style="font-size:.82rem;margin-top:6px;line-height:1.8">直接在下方打字，<b>按 Enter 就換行</b>（不用寫 \\n）。<br>
+      <b>編輯模式分兩種：</b><br>
+      • <b>即時存在這台瀏覽器</b>：更換不同電腦使用時，可用「📊 記錄」頁的<b>匯出／匯入</b>功能帶著走。<br>
+      • <b>💾 儲存到檔案</b>＝直接寫回 <code>web/data/notes.js</code>（需執行 <code>啟動陪讀系統.bat</code> 啟動網頁伺服器；若用一般 http.server 或雙擊開啟則無效，請改按「📋 複製程式碼」貼給 Claude）。<br>
+      <b>內文請寫純文字</b>：主線重點<b>不使用粗體、紅／藍字，也不使用背景色</b>（2026-08-08 起）。要強調請關掉編輯模式、改用「✏️ 標記模式」自己標（底色＋字樣，存這台瀏覽器）。<br>
+      「簡報 3-20」這類頁碼直接打純文字即可，網頁會自動變成可點的跳頁連結。<br>
+      <b>表格</b>：一行＝一列，用半形 <code>|</code> 分欄，連續兩行以上才會變成表格；<b>同一格內要換行請打 <code>\n</code></b>（反斜線＋n，不能按 Enter，按了會變成新的一列）。格內若有 2 個以上的 <code>①②③</code>，則會自動逐項換行、不必自己加。</div></div>`;
+  n.sections.forEach((sec,si)=>{
+    h+=`<div class="card"><div class="sec-head"><h3>${sec.no}　${sec.title}</h3>
+      <button class="ghost sm" onclick="noteAdd(${notesUnit},${si})">＋ 新增重點</button></div>`;
+    sec.points.forEach((p,i)=>{
+      const rows=Math.max(3,(p.b.match(/\n/g)||[]).length+2);
+      h+=`<div class="kp" style="background:#fcfcfd">
+        <input class="ed-h" value="${escA(p.h)}" placeholder="重點標題（可加 ⭐）" oninput="noteSet('h',${notesUnit},${si},${i},this.value)">
+        <textarea class="ed-b" rows="${rows}" placeholder="重點內容（Enter 換行）" oninput="noteSet('b',${notesUnit},${si},${i},this.value)">${esc(p.b)}</textarea>
+        <div class="row" style="justify-content:flex-end;margin-top:4px"><button class="ghost sm" style="color:var(--bad);border-color:var(--bad)" onclick="noteDel(${notesUnit},${si},${i})">🗑️ 刪除此條</button></div></div>`;
+    });
+    h+='</div>';
+  });
+  h+=`<div class="card muted" style="font-size:.82rem">💡 改好後：關掉「✍️ 編輯模式」即可看到套用後的排版。<b>「💾 儲存到檔案」會同時寫回 notes.js 與 study/notes/unit${notesUnit}.md（兩邊自動同步）</b>——需用 <code>python web/save_server.py</code> 啟動網頁才生效。</div>`;
+  return h;
+}
+function noteSet(field,unit,si,pi,val){
+  const n=NOTES[unit]; if(!n)return;
+  n.sections[si].points[pi][field]=val;
+  S.notesEdit[unit]=n.sections; save();   // 即時存本機，不重繪（避免游標跳掉）
+}
+function noteAdd(unit,si){
+  NOTES[unit].sections[si].points.push({h:"⭐ 新重點標題",b:"內容…"});
+  S.notesEdit[unit]=NOTES[unit].sections; save(); nav('notes');
+}
+function noteDel(unit,si,pi){
+  if(!confirm('刪除這條重點？'))return;
+  NOTES[unit].sections[si].points.splice(pi,1);
+  S.notesEdit[unit]=NOTES[unit].sections; save(); nav('notes');
+}
+function noteRevert(unit){
+  if(!confirm('改用「最新檔案版」重點？\n\n你在本機對單元 '+unit+' 的編輯將被清除（不影響其他單元、不影響螢光筆標記）。'))return;
+  NOTES[unit]=JSON.parse(JSON.stringify(NOTES_ORIG[unit]));
+  delete S.notesEdit[unit];
+  if(window.NOTES_LOCAL) delete NOTES_LOCAL[unit];
+  save(); nav('notes');
+}
+// 目前有幾個單元正被「本機編輯版」蓋著
+function localUnits(){return Object.keys(window.NOTES_LOCAL||{}).map(Number).sort((a,b)=>a-b)}
+function noteRevertAll(){
+  const us=localUnits();
+  if(!us.length){alert('目前沒有任何單元被本機編輯版蓋著，你看到的都是最新檔案版。');return;}
+  if(!confirm('全部改用「最新檔案版」重點？\n\n受影響單元：'+us.join('、')+'（共 '+us.length+' 個）\n'
+    +'你在本機對這些單元的編輯將被清除，無法復原。\n\n不影響：螢光筆標記與字樣、測驗成績、複習進度。'))return;
+  for(const u of us){
+    if(window.NOTES_ORIG&&NOTES_ORIG[u])NOTES[u]=JSON.parse(JSON.stringify(NOTES_ORIG[u]));
+    delete S.notesEdit[u];
+    delete NOTES_LOCAL[u];
+  }
+  save(); nav('notes');
+  alert('已全部改用最新檔案版（單元 '+us.join('、')+'）。');
+}
+function noteSaveFile(){
+  // 送出「編輯過的單元」清單（含標題），讓伺服器一併同步各 study/notes/unitN.md
+  const ids=Object.keys(S.notesEdit||{});
+  const editedIds=ids.length?ids:[String(notesUnit)];
+  const units=editedIds.map(id=>({id:+id,title:(BOOK.units.find(u=>u.id==id)||{}).title||''}));
+  const payload={notes:NOTES, units};
+  fetch('/save/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+    .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+    .then(d=>{if(d.ok){alert('✅ 已寫入 web/data/notes.js（'+d.bytes+' 位元組）\n並同步 study/notes/unit'+(d.mdSynced||[]).join('、unit')+'.md！\n重新整理即為最新內容。');}else{throw new Error(d.error||'unknown');}})
+    .catch(e=>alert('無法直接存檔（'+e.message+'）。\n\n請改用「python web/save_server.py」啟動網頁（不是 http.server，也不是雙擊 index.html），存檔功能才會生效；\n或先按「📋 複製程式碼」貼給 Claude 幫你更新。'));
+}
+function noteCopy(unit){
+  const code='  "'+unit+'": '+JSON.stringify(NOTES[unit],null,2)+',';
+  const done=()=>alert('已複製「單元 '+unit+'」的 notes.js 程式碼！\n\n貼給 Claude 幫你更新（會同步 md 並驗證），或自行貼進 web/data/notes.js 取代該單元區塊。');
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(code).then(done).catch(()=>prompt('請手動複製以下程式碼：',code));
+  }else{ prompt('請手動複製以下程式碼：',code); }
+}
+// （已移除 gotoBook：重點頁不再有「翻到原文 p.XX」的教材原書連結；閱讀頁請直接用左側章節或 gotoSlide）
 
-/* ============ 互動式螢光筆（標記模式，存 localStorage S.hl） ============ */
-const HLPAL=[['y','#fde68a','黃'],['g','#bbf7d0','綠'],['b','#bfdbfe','藍'],['p','#fbcfe8','粉']];
-// 依 S.hl 把每個 kp-b 的文字範圍包成 <span class="uhl uhl-X">
+/* ============ 互動式標記（標記模式：底色 S.hl ＋ 字樣 S.fmt，皆存 localStorage） ============ */
+const HLPAL=[['y','#fde68a','黃'],['g','#bbf7d0','綠'],['b','#bfdbfe','藍'],['p','#fbcfe8','粉'],['k','#dcdfe4','灰']];
+// 字樣：[代碼, 鈕面文字, 說明]；'n'＝一般文字（會蓋掉重點原有的粗體與顏色）
+const FMTPAL=[['b','B','加粗（保留原本顏色）'],['r','紅','改成紅字'],['l','藍','改成藍字'],['e','綠','改成綠字 (#009100)'],['n','般','改回一般文字（取消原有粗體／顏色）']];
+// 依 S.fmt / S.hl 把每個重點（標題與內文）的文字範圍包成覆蓋用的 <span>
 function applyAllHighlights(){
-  document.querySelectorAll('.kp-b[data-hlid]').forEach(el=>{
-    const ranges=S.hl[el.dataset.hlid];
-    if(ranges&&ranges.length)hlPaint(el,ranges);
+  healAllMarks();                                   // 先把位移校正回正確的文字上，再上色
+  document.querySelectorAll('.kp-h[data-hlid],.kp-b[data-hlid]').forEach(el=>{
+    const id=el.dataset.hlid;
+    const ok=a=>(a||[]).filter(r=>!r.lost);         // 找不到原文的孤兒標記不畫（畫了只會標到別的字）
+    const fm=ok((S.fmt||{})[id]);                   // 先鋪字樣，底色再疊在上面（兩者可並存）
+    if(fm.length)hlPaint(el,fm.map(r=>({start:r.start,end:r.end,k:'uf-'+r.f})));
+    const hs=ok(S.hl[id]);
+    if(hs.length)hlPaint(el,hs.map(r=>({start:r.start,end:r.end,k:'uhl uhl-'+r.c})));
   });
 }
+/* ---- 標記錨定（2026-08-15） ----------------------------------------------
+   問題：標記原本只存 {start,end} 字元位移。只要重點內文或渲染方式一改
+   （Claude 重新生成 notes.js、出處「簡報 X-XX」被移到卡片右下角、重點增刪順序變動…），
+   位移就整段偏掉，標記全部標到不相干的字上。
+   作法：每段標記另存 t＝被標的文字本身、p＝前面 12 個字的脈絡、ht＝所屬重點標題。
+   每次渲染先 healAllMarks()：①原位對得上就直接用 ②對不上就用 t 在同一條重點裡重新定位
+   ③連重點都被搬走了，就找同單元中標題相同的那條 ④真的找不到＝孤兒，標記留著但不畫。
+   舊資料沒有 t（本次改版前存的），改用「區塊／標點邊界評分」自動試出整條重點的位移量。 */
+const MARK_CTX=12;
+const markKind=id=>id.endsWith('|h');               // true＝標題、false＝內文（重新定位時不互相混用）
+function markTitleOf(id){
+  const el=document.querySelector('[data-hlid="'+(markKind(id)?id:id+'|h')+'"]');
+  return el?el.textContent:null;
+}
+function markAnchor(text,r,title){                  // 依目前位移補記文字錨點
+  r.t=text.slice(r.start,r.end);
+  r.p=text.slice(Math.max(0,r.start-MARK_CTX),r.start);
+  if(title!=null)r.ht=title;
+  delete r.lost;
+}
+const markFits=(text,r)=>!!r.t&&r.end-r.start===r.t.length&&text.substr(r.start,r.t.length)===r.t;
+// 在 text 中找 r.t 最可能的位置：優先前文脈絡也吻合者，其次離原位移最近者
+function markFind(text,r){
+  if(!r.t)return -1;
+  let i=text.indexOf(r.t), best=-1, bs=-Infinity;
+  while(i>=0){
+    const sc=(r.p&&text.slice(Math.max(0,i-r.p.length),i)===r.p?1e6:0)-Math.abs(i-r.start);
+    if(sc>bs){bs=sc;best=i}
+    i=text.indexOf(r.t,i+1);
+  }
+  return best;
+}
+function healAllMarks(){
+  const els=[...document.querySelectorAll('.kp-h[data-hlid],.kp-b[data-hlid]')]
+    .map(el=>({id:el.dataset.hlid,el,text:el.textContent}));
+  if(!els.length)return;                            // 不在重點頁
+  const byId=new Map(els.map(e=>[e.id,e]));
+  const pres=markPres();
+  let dirty=false;
+  for(const bag of [S.hl,S.fmt]){
+    const moves=[];                                 // [range, 新的 hlid]：重點順序變動時整段搬家
+    for(const id of Object.keys(bag)){
+      if(!inPres(id,pres))continue;                 // 只校正目前畫面上的單元
+      const ranges=bag[id]||[]; if(!ranges.length)continue;
+      const cur=byId.get(id), title=markTitleOf(id), keep=[];
+      const legacy=ranges.filter(r=>!r.t);          // 舊資料：整條重點一起試位移
+      if(cur&&legacy.length){
+        markAlign(cur,legacy);
+        legacy.forEach(r=>markAnchor(cur.text,r,title));
+        dirty=true;
+      }
+      for(const r of ranges){
+        if(cur&&markFits(cur.text,r)){ if(r.lost){delete r.lost;dirty=true} keep.push(r); continue }
+        const at=cur?markFind(cur.text,r):-1;       // ②同一條重點裡重新定位
+        if(at>=0){ r.start=at; r.end=at+r.t.length; markAnchor(cur.text,r,title); dirty=true; keep.push(r); continue }
+        let alt=null, ap=-1;                        // ③重點被搬到別的位置：找標題相同的那條
+        if(r.ht)for(const e of els){
+          if(e.id===id||markKind(e.id)!==markKind(id)||markTitleOf(e.id)!==r.ht)continue;
+          const p=markFind(e.text,r); if(p>=0){alt=e;ap=p;break}
+        }
+        if(alt){ r.start=ap; r.end=ap+r.t.length; markAnchor(alt.text,r,r.ht); moves.push([r,alt.id]); dirty=true; continue }
+        if(!r.lost){r.lost=1;dirty=true}            // ④找不到＝內容真的被改掉了，留著但不畫
+        keep.push(r);
+      }
+      if(keep.length)bag[id]=keep; else delete bag[id];
+    }
+    for(const [r,to] of moves)(bag[to]=bag[to]||[]).push(r);
+  }
+  if(dirty)save();
+}
+// 區塊邊界（每個 div／td／th 的起訖字元位置）——使用者的標記多半起於行首、止於行尾或標點
+function markEdges(el){
+  const w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);
+  const starts=new Set([0]), ends=new Set(); let pos=0, prev=null;
+  while(w.nextNode()){
+    const n=w.currentNode, b=(n.parentElement&&n.parentElement.closest('div,td,th,li,p'))||el;
+    if(b!==prev){ starts.add(pos); if(prev)ends.add(pos); prev=b; }
+    pos+=n.length;
+  }
+  ends.add(pos);
+  return {starts,ends};
+}
+const MK_PUNC=/[。，、；：！？）〕」』】…—－\s]/, MK_WORD=/[A-Za-z0-9]/, MK_CLOSE=/[。，、；：！？）」』】]/;
+function markScore(text,edges,ranges,s){            // 位移 s 後，各段標記的起訖有多「像人選的」
+  let sc=0;
+  for(const r of ranges){
+    const a=r.start+s, b=r.end+s;
+    if(a<0||b>text.length||a>=b)return -Infinity;
+    if(edges.starts.has(a))sc+=4; else if(a===0||MK_PUNC.test(text[a-1]))sc+=2;
+    if(MK_WORD.test(text[a-1]||'')&&MK_WORD.test(text[a]))sc-=6;   // 切在英數字中間＝幾乎不可能
+    if(MK_CLOSE.test(text[a]))sc-=3;                               // 從句號、右括號起頭＝不像
+    if(edges.ends.has(b))sc+=4; else if(MK_PUNC.test(text[b-1]))sc+=2;
+    if(MK_WORD.test(text[b-1]||'')&&MK_WORD.test(text[b]||''))sc-=6;
+  }
+  return sc;
+}
+// 舊標記自動對齊：整條重點的標記一起平移，取評分最高（同分取位移最小）的那個
+function markAlign(cur,ranges){
+  const edges=markEdges(cur.el);
+  let best=0, bs=markScore(cur.text,edges,ranges,0);
+  for(let d=1;d<=120;d++)for(const s of [-d,d]){
+    const sc=markScore(cur.text,edges,ranges,s);
+    if(sc>bs){bs=sc;best=s}
+  }
+  if(best)ranges.forEach(r=>{r.start+=best;r.end+=best});
+  return best;
+}
+// ranges: [{start,end,k}]，k＝要套的 class 字串
 function hlPaint(el,ranges){
   const walker=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);
   const nodes=[]; let pos=0;
   while(walker.nextNode()){const n=walker.currentNode;nodes.push({node:n,start:pos,end:pos+n.length});pos+=n.length;}
   for(const it of nodes){
     const segs=[];
-    for(const r of ranges){const s=Math.max(r.start,it.start),e=Math.min(r.end,it.end);if(s<e)segs.push({s:s-it.start,e:e-it.start,c:r.c});}
+    for(const r of ranges){const s=Math.max(r.start,it.start),e=Math.min(r.end,it.end);if(s<e)segs.push({s:s-it.start,e:e-it.start,k:r.k});}
     if(!segs.length)continue;
     segs.sort((a,b)=>a.s-b.s);
     const text=it.node.textContent, frag=document.createDocumentFragment(); let cur=0;
     for(const sg of segs){
       if(sg.s>cur)frag.appendChild(document.createTextNode(text.slice(cur,sg.s)));
-      const sp=document.createElement('span'); sp.className='uhl uhl-'+sg.c; sp.textContent=text.slice(sg.s,sg.e); frag.appendChild(sp);
+      const sp=document.createElement('span'); sp.className=sg.k; sp.textContent=text.slice(sg.s,sg.e); frag.appendChild(sp);
       cur=Math.max(cur,sg.e);
     }
     if(cur<text.length)frag.appendChild(document.createTextNode(text.slice(cur)));
@@ -459,13 +1097,13 @@ function getSelOffsets(container){
   return {start, end:start+text.length};
 }
 function handleSel(e){
-  if(cur!=='notes'||!markMode)return;
+  if(!markOn())return;
   if(e&&e.target&&e.target.closest&&e.target.closest('#hlbar'))return;
   const sel=window.getSelection();
   if(!sel||sel.isCollapsed||!sel.rangeCount){hideBar();return}
   let node=sel.getRangeAt(0).commonAncestorContainer;
   if(node.nodeType===3)node=node.parentElement;
-  const container=node&&node.closest?node.closest('.kp-b'):null;
+  const container=node&&node.closest?node.closest('.kp-b[data-hlid],.kp-h[data-hlid]'):null;
   if(!container||!container.dataset.hlid){hideBar();return}
   const off=getSelOffsets(container);
   if(!off){hideBar();return}
@@ -476,104 +1114,180 @@ function showBar(rect){
   let bar=document.getElementById('hlbar');
   if(!bar){
     bar=document.createElement('div'); bar.id='hlbar';
-    bar.innerHTML=HLPAL.map(([c,col,lbl])=>`<button title="${lbl}底" style="background:${col}" onclick="hlAdd('${c}')"></button>`).join('')
-      +`<button class="er" title="清除標記" onclick="hlErase()">✕</button>`;
+    bar.innerHTML=
+      `<div class="hlrow"><span class="hll">底</span>`
+      +HLPAL.map(([c,col,lbl])=>`<button title="${lbl}底" style="background:${col}" onclick="hlAdd('${c}')"></button>`).join('')
+      +`<button class="er" title="清除底色" onclick="hlErase()">✕</button></div>`
+      +`<div class="hlrow"><span class="hll">字</span>`
+      +FMTPAL.map(([f,lbl,tip])=>`<button class="fx" title="${tip}" onclick="fmtAdd('${f}')">${lbl}</button>`).join('')
+      +`<button class="er" title="取消我的字樣設定（還原成原檔樣式）" onclick="fmtErase()">↺</button></div>`;
     document.body.appendChild(bar);
   }
   bar.style.display='flex';
-  const bw=bar.offsetWidth||150, bh=bar.offsetHeight||34;
+  const bw=bar.offsetWidth||160, bh=bar.offsetHeight||64;
   let left=rect.left+rect.width/2-bw/2, top=rect.top-bh-8;
   left=Math.max(8,Math.min(left,innerWidth-bw-8));
-  if(top<8)top=rect.bottom+8;
+  if(top<8)top=rect.bottom+8;                              // 上方放不下 → 改放選取範圍下方
+  top=Math.max(8,Math.min(top,innerHeight-bh-8));          // 一律夾在畫面內（選到頁面底部時才不會被切掉）
   bar.style.left=left+'px'; bar.style.top=top+'px';
 }
 function hideBar(){const b=document.getElementById('hlbar');if(b)b.style.display='none';curSel=null}
-function hlAdd(c){
-  if(!curSel)return;
-  const arr=S.hl[curSel.hlid]||[];
-  // 移除與本次選取重疊的舊標記，避免疊色
-  const kept=arr.filter(r=>r.end<=curSel.start||r.start>=curSel.end);
-  kept.push({start:curSel.start,end:curSel.end,c});
-  S.hl[curSel.hlid]=kept; save();
-  window.getSelection().removeAllRanges(); hideBar(); render();
+// 從範圍陣列挖掉 [s,e) 這一段（兩側殘段保留）——讓使用者能只改一小段，不會弄丟同一句其餘的標記
+function cutRanges(arr,s,e){
+  const out=[];
+  for(const r of arr){
+    if(r.end<=s||r.start>=e){out.push(r);continue}
+    if(r.start<s)out.push(Object.assign({},r,{end:s}));
+    if(r.end>e)out.push(Object.assign({},r,{start:e}));
+  }
+  return out;
 }
-function hlErase(){
+// 套用後保留選取範圍，讓使用者可以連按（底色→字樣）；重繪後用純文字位置重新選回來
+function reselect(){
   if(!curSel)return;
-  const arr=S.hl[curSel.hlid]||[];
-  S.hl[curSel.hlid]=arr.filter(r=>r.end<=curSel.start||r.start>=curSel.end);
-  save(); window.getSelection().removeAllRanges(); hideBar(); render();
+  const el=document.querySelector('[data-hlid="'+curSel.hlid+'"]'); if(!el)return;
+  const at=off=>{
+    const w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT); let pos=0;
+    while(w.nextNode()){const n=w.currentNode; if(off<=pos+n.length)return{node:n,offset:off-pos}; pos+=n.length;}
+    return null;
+  };
+  const a=at(curSel.start), b=at(curSel.end); if(!a||!b)return;
+  const r=document.createRange(); r.setStart(a.node,a.offset); r.setEnd(b.node,b.offset);
+  const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+  showBar(r.getBoundingClientRect());
+}
+function markApply(store,key,val){
+  if(!curSel)return;
+  const keep=curSel;                                    // render() 會重繪，先留著選取位置
+  const el=document.querySelector('[data-hlid="'+keep.hlid+'"]');
+  const arr=cutRanges(store[keep.hlid]||[],keep.start,keep.end);
+  if(val)arr.push(Object.assign({start:keep.start,end:keep.end},{[key]:val}));
+  // 補記文字錨點：新的一段要記，被切開的殘段起訖變了也要重記，之後內文改動才追得回來
+  if(el){const title=markTitleOf(keep.hlid); arr.forEach(r=>markAnchor(el.textContent,r,title));}
+  if(arr.length)store[keep.hlid]=arr; else delete store[keep.hlid];
+  save(); render();
+  curSel=keep; reselect();
+}
+function hlAdd(c){markApply(S.hl,'c',c)}          // 上底色
+function hlErase(){markApply(S.hl,'c',null)}      // 清除底色
+function fmtAdd(f){markApply(S.fmt,'f',f)}        // 改字樣（b粗體／r紅／l藍／n一般）
+function fmtErase(){markApply(S.fmt,'f',null)}    // 取消我的字樣設定，回到原檔樣式
+/* ---- 目前畫面的標記範圍（重點頁 / 快速記憶頁共用） ---- */
+// hlid 前綴：重點主線「2|」、簡報對照「S2|」、⚡ 快速記憶「C2|」、🎯 歷史考題「E2|」
+// （快速記憶的全書連續、歷史考題的「全部單元」一次涵蓋 9 個單元）
+function markPres(){
+  if(cur==='cram')return cramAll?BOOK.units.map(u=>'C'+u.id+'|'):['C'+cramUnit+'|'];
+  if(cur==='exam')return examUnit?['E'+examUnit+'|']:BOOK.units.map(u=>'E'+u.id+'|');
+  return [(notesSrc==='slide'?'S':'')+notesUnit+'|'];
+}
+function inPres(id,ps){return ps.some(p=>id.startsWith(p))}
+function markOn(){return cur==='notes'?markMode:cur==='cram'?cramMark:cur==='exam'?examMark:false}
+function markScopeLabel(){
+  if(cur==='cram')return cramAll?'⚡ 快速記憶 全書連續（單元 1–9）':`⚡ 快速記憶 單元 ${cramUnit}`;
+  if(cur==='exam')return examUnit?`🎯 歷史考題 單元 ${examUnit}`:'🎯 歷史考題 全部單元（1–9）';
+  return `${notesSrc==='slide'?'簡報對照 ':''}單元 ${notesUnit}`;
+}
+// 標記模式的說明卡＋工具鈕（重點頁與快速記憶頁共用；文案依目前頁面微調）
+function markCard(){
+  const isCram=cur==='cram', isExam=cur==='exam';
+  const what=isCram?'區塊':'重點', file=isCram?'cram.js':isExam?'exam.js':'notes.js';
+  const scope=(isCram&&cramAll)||(isExam&&!examUnit)?'目前畫面（單元 1–9）':'本單元';
+  return `<div class="card" style="background:#f5f3ff;border-color:#c4b5fd;font-size:.86rem;line-height:1.9">
+      <b>✏️ 標記模式</b>：選取${what}<b>標題或內文</b>的任一段字，就會跳出小工具列。
+      <br>　<b>底</b>＝螢光筆底色（黃／綠／藍／粉／<b>灰</b>），<b>✕</b> 清除底色。
+      <br>　<b>字</b>＝文字樣式：<b>B</b> 加粗、<b style="color:#b91c1c">紅</b>字、<b style="color:#2563eb">藍</b>字、<b style="color:#009100">綠</b>字、<b>般</b>＝改回一般文字
+      （<b>可蓋掉${what}原本就有的粗體與紅／藍字</b>）、<b>↺</b> 取消我的字樣設定、還原成原檔樣式。
+      <br>　選取範圍在按下後<b>不會消失</b>，可連按多顆（例如先上黃底、再改成紅字）。
+      <div class="muted" style="font-size:.82rem;margin-top:4px">標記存在這台瀏覽器（localStorage），會隨「📊 記錄」頁的<b>匯出／匯入</b>帶著走；<b>不會</b>改到 <code>${file}</code>（要永久寫進檔案${isExam?'請跟 Claude 說':'請用「✍️ 編輯模式」或跟 Claude 說'}）。${isCram
+        ?'<br>⚡ 快速記憶的標記與「📌 重點」頁的標記<b>各自獨立</b>，互不影響。':''}${isExam
+        ?'<br>🎯 歷史考題的標記與「📌 重點」頁的標記<b>各自獨立</b>，互不影響。':''}</div>
+      <div class="muted" style="font-size:.82rem;margin-top:6px">標記是<b>認內容</b>的：之後 Claude 改了${what}內文，標記會自動跟著原本那段文字跑，不會再整段偏掉。
+        萬一舊標記位置不對，用下面的「🩹 自動對齊」；還差一兩個字就用「微調」左右挪。${markLost('unit')
+          ?`<br><b style="color:var(--bad)">⚠ ${scope}有 ${markLost('unit')} 處標記找不到原文</b>（那段文字已被改寫），已暫時不顯示。
+             <button class="ghost sm" style="margin-left:6px;color:var(--bad);border-color:var(--bad)" onclick="clearLostMarks()">🗑️ 清掉這些失效標記</button>`:''}</div>
+      <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">
+        <button class="ghost sm" onclick="autoAlignMarks()" ${markCount('unit')?'':'disabled'}>🩹 自動對齊${scope}標記</button>
+        <button class="ghost sm" onclick="nudgeMarks(-1)" ${markCount('unit')?'':'disabled'} title="${scope}所有標記往前挪一個字">◀ 微調 −1 字</button>
+        <button class="ghost sm" onclick="nudgeMarks(1)" ${markCount('unit')?'':'disabled'} title="${scope}所有標記往後挪一個字">微調 ＋1 字 ▶</button>
+      </div>
+      <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">
+        <button class="ghost sm" onclick="clearMarks('unit')" ${markCount('unit')?'':'disabled'}>🧹 清除${scope}標記（${markCount('unit')} 處）</button>
+        <button class="ghost sm" style="color:var(--bad);border-color:var(--bad)" onclick="clearMarks('all')" ${markCount('all')?'':'disabled'}>🧹 清除全部標記（${markCount('all')} 處）</button>
+      </div></div>`;
+}
+/* ---- 一鍵清除標記（底色＋字樣一起清） ---- */
+// scope: 'unit'＝目前畫面上的單元（見 markPres）｜'all'＝全部（重點＋簡報對照＋快速記憶）
+function markIds(scope){
+  const keys=new Set([...Object.keys(S.hl||{}),...Object.keys(S.fmt||{})]);
+  if(scope==='all')return [...keys];
+  const pres=markPres();
+  return [...keys].filter(k=>inPres(k,pres));
+}
+function markCount(scope){   // 標記「處數」＝底色段數＋字樣段數
+  return markIds(scope).reduce((n,k)=>n+((S.hl[k]||[]).length)+((S.fmt[k]||[]).length),0);
+}
+function markLost(scope){    // 找不到原文、暫時不顯示的標記處數
+  return markIds(scope).reduce((n,k)=>
+    n+((S.hl[k]||[]).filter(r=>r.lost).length)+((S.fmt[k]||[]).filter(r=>r.lost).length),0);
+}
+/* ---- 舊標記位置修正 ---- */
+// 自動對齊：丟掉錨點，讓 healAllMarks() 重跑「邊界評分」替每條重點各自算最佳位移
+function autoAlignMarks(){
+  const ids=markIds('unit');
+  if(!ids.length){alert('本單元沒有標記。');return}
+  if(!confirm('自動對齊「'+markScopeLabel()+'」的標記？\n\n會依標點與行首行尾，替每一段各自推算正確位移。\n對齊後若還差一兩個字，可用「微調」左右挪。'))return;
+  for(const k of ids)for(const bag of [S.hl,S.fmt])
+    (bag[k]||[]).forEach(r=>{delete r.t;delete r.p;delete r.lost});
+  save(); hideBar(); render();
+}
+// 微調：本單元所有標記整體左右挪 d 個字（挪完立刻重記錨點，之後才不會又被自動定位拉回去）
+function nudgeMarks(d){
+  const texts=new Map([...document.querySelectorAll('.kp-h[data-hlid],.kp-b[data-hlid]')]
+    .map(el=>[el.dataset.hlid,el.textContent]));
+  let moved=0;
+  for(const k of markIds('unit')){
+    const text=texts.get(k); if(text==null)continue;
+    const title=markTitleOf(k);
+    for(const bag of [S.hl,S.fmt])(bag[k]||[]).forEach(r=>{
+      const a=r.start+d, b=r.end+d;
+      if(a<0||b>text.length||a>=b)return;
+      r.start=a; r.end=b; markAnchor(text,r,title); moved++;
+    });
+  }
+  if(!moved){alert('已經到頭了，沒有標記可以再挪。');return}
+  save(); hideBar(); render();
+}
+function clearLostMarks(){
+  const n=markLost('unit');
+  if(!n){alert('本單元沒有失效的標記。');return}
+  if(!confirm('清掉本單元 '+n+' 處「找不到原文」的標記？\n\n這些是內文被改寫後對不回去的標記，無法復原。'))return;
+  for(const k of markIds('unit'))for(const bag of [S.hl,S.fmt]){
+    const arr=(bag[k]||[]).filter(r=>!r.lost);
+    if(arr.length)bag[k]=arr; else delete bag[k];
+  }
+  save(); hideBar(); render();
+}
+function clearMarks(scope){
+  const ids=markIds(scope), n=markCount(scope);
+  if(!n){alert('目前沒有標記可以清除。');return;}
+  const label=scope==='all'?'全部（重點＋簡報對照＋⚡ 快速記憶＋🎯 歷史考題）':markScopeLabel();
+  if(!confirm(`確定清除「${label}」的標記？\n\n共 ${n} 處（螢光筆底色＋字樣調整）一併清掉，無法復原。\n重點／快速記憶內容、測驗成績與進度都不受影響。`))return;
+  for(const k of ids){delete S.hl[k];delete S.fmt[k];}
+  save(); hideBar(); render();   // 用 render 不用 nav：從「📊 記錄」頁按也留在原頁
 }
 document.addEventListener('mouseup',e=>setTimeout(()=>handleSel(e),0));
+document.addEventListener('touchend',e=>setTimeout(()=>handleSel(e),0));   // 手機：長按選字後也叫出工具列
+// 捲動時工具列（position:fixed）會留在原地 → 跟著選取範圍移動，捲出畫面就收起來
+addEventListener('scroll',()=>{
+  const bar=document.getElementById('hlbar');
+  if(!bar||bar.style.display==='none'||!curSel)return;
+  const sel=window.getSelection();
+  if(!sel||!sel.rangeCount||sel.isCollapsed){hideBar();return}
+  const r=sel.getRangeAt(0).getBoundingClientRect();
+  if(r.bottom<0||r.top>innerHeight){hideBar();return}
+  showBar(r);
+},{passive:true});
 
-/* ============ 朗讀（Web Speech API） ============ */
-let tts={playing:false,paused:false,queue:[],idx:0,vi:-1,rate:1};
-let zhVoices=[];
-function loadVoices(){
-  zhVoices=speechSynthesis.getVoices().filter(v=>/^zh|cmn/i.test(v.lang));
-  // 只要使用者沒手動選過語音，就每次（含 Edge 線上語音稍後載入時）重選最佳男聲
-  if(!tts.userPicked&&zhVoices.length){
-    // 優先：Edge 自然男聲雲哲 (YunJhe) > 離線志威 (Zhiwei)；找不到再退回任一 zh-TW
-    let pref=zhVoices.findIndex(v=>/YunJhe/i.test(v.name));
-    if(pref<0)pref=zhVoices.findIndex(v=>/Zhiwei/i.test(v.name));
-    if(pref<0)pref=zhVoices.findIndex(v=>/zh-TW/i.test(v.lang));
-    tts.vi=pref>=0?pref:0;
-  }
-  updTTS();
-}
-if('speechSynthesis' in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices}
-function ttsBoxHTML(){
-  if(!('speechSynthesis' in window))return '<span class="muted" style="font-size:.8rem">此瀏覽器不支援語音朗讀</span>';
-  const opts=zhVoices.map((v,i)=>`<option value="${i}" ${i===tts.vi?'selected':''}>${esc(v.name)}</option>`).join('');
-  const cur=tts.queue[tts.idx];
-  const st=tts.playing?`🔊 朗讀中 p.${cur?cur.p:''}（第 ${tts.idx+1}/${tts.queue.length} 段）${tts.paused?'　⏸ 已暫停':''}`:'點「朗讀本節」從目前小節開始唸';
-  return `<div class="row" style="gap:6px">
-      <button class="act sm" onclick="ttsStart()">🔊 朗讀本節</button>
-      <button class="ghost sm" onclick="ttsPause()" ${tts.playing?'':'disabled'}>${tts.paused?'▶ 繼續':'⏸ 暫停'}</button>
-      <button class="ghost sm" onclick="ttsStop()" ${tts.playing?'':'disabled'}>⏹ 停止</button></div>
-    <select onchange="tts.vi=+this.value;tts.userPicked=true">${opts||'<option>（找不到中文語音）</option>'}</select>
-    <div class="row" style="gap:6px"><span class="muted" style="font-size:.8rem">語速</span>
-      <input type="range" min="0.7" max="1.6" step="0.1" value="${tts.rate}" style="flex:1"
-        oninput="tts.rate=+this.value;document.getElementById('rateval').textContent=this.value">
-      <span id="rateval" class="muted" style="font-size:.8rem">${tts.rate}</span></div>
-    <div class="muted" style="font-size:.78rem;min-height:1.2em">${st}</div>`;
-}
-function updTTS(){const b=document.getElementById('ttsbox');if(b)b.innerHTML=ttsBoxHTML()}
-function ttsParas(){ // 目前小節（curPage 起）到下一小節前的段落
-  const u=BOOK.units.find(x=>x.id===readerUnit), secs=u.sections;
-  let si=0;for(let i=0;i<secs.length;i++)if(secs[i].page<=curPage)si=i;
-  const end=si+1<secs.length?secs[si+1].page-1:99999;
-  const items=[];
-  for(const pg of u.content)
-    if(pg.p>=curPage&&pg.p<=end)
-      for(const t of pg.paras){const s=ttsClean(t);if(s.length>1)items.push({p:pg.p,text:s})}
-  return items;
-}
-function ttsClean(s){
-  return s.replace(/^[¼h]+\s*/,'').replace(/^\((\d+)\)\s*/,'第$1點，')
-    .replace(/^(\d+\.\d+(\.\d+)?)\s*/,'$1。').replace(/[\t]/g,'').trim();
-}
-function ttsStart(){
-  speechSynthesis.cancel();
-  tts.queue=ttsParas();tts.idx=0;tts.playing=true;tts.paused=false;
-  if(!tts.queue.length){tts.playing=false;updTTS();return}
-  speakNext();updTTS();
-}
-function speakNext(){
-  if(!tts.playing||tts.idx>=tts.queue.length){ttsStop();return}
-  const u=new SpeechSynthesisUtterance(tts.queue[tts.idx].text);
-  if(zhVoices[tts.vi])u.voice=zhVoices[tts.vi];
-  u.lang='zh-TW';u.rate=tts.rate;
-  u.onend=()=>{if(tts.playing){tts.idx++;speakNext();updTTS()}};
-  u.onerror=()=>{if(tts.playing){tts.idx++;speakNext();updTTS()}};
-  speechSynthesis.speak(u);
-}
-function ttsPause(){
-  if(!tts.playing)return;
-  if(tts.paused){speechSynthesis.resume();tts.paused=false}
-  else{speechSynthesis.pause();tts.paused=true}
-  updTTS();
-}
-function ttsStop(){tts.playing=false;tts.paused=false;try{speechSynthesis.cancel()}catch(e){}updTTS()}
 function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 
 /* ============ 測驗引擎 ============ */
@@ -603,13 +1317,56 @@ function startReview(){
   quizSession={mode:'review',items,idx:0,correct:0,answered:false,picks:[],results:[]};
   cur='quiz';render();
 }
+/* ---- ★ 手動標記要練的題目（作答畫面右上角） ---- */
+function starred(uid,qi){return ((S.star||{})[String(uid)]||[]).includes(qi)}
+function toggleStar(uid,qi){
+  uid=String(uid);
+  const arr=(S.star[uid]||[]).slice(), i=arr.indexOf(qi);
+  if(i>=0)arr.splice(i,1); else arr.push(qi);
+  if(arr.length)S.star[uid]=arr.sort((a,b)=>a-b); else delete S.star[uid];
+  save();render();
+}
+function starCount(){return Object.values(S.star||{}).reduce((n,a)=>n+a.length,0)}
+function clearStars(){
+  const n=starCount();
+  if(!n){alert('目前沒有 ★ 標記的題目。');return}
+  if(!confirm('清除全部 ★ 標記共 '+n+' 題？\n\n（不影響錯題清單、複習排程與測驗成績）'))return;
+  S.star={};save();render();
+}
+// 某單元「最後一次完測」答錯的題目；沒有完測紀錄時，暫時退回用錯題清單
+function drillSet(uid){
+  uid=String(uid);
+  const ok=qi=>QUIZ[uid]&&QUIZ[uid][qi];
+  const rec=(S.lastWrong||{})[uid];
+  const stars=((S.star||{})[uid]||[]).filter(ok);
+  const base=rec?(rec.qis||[]).filter(ok)
+                :S.wrong.filter(w=>String(w.uid)===uid&&ok(w.qi)).map(w=>w.qi);
+  const qis=[...new Set([...base,...stars])].sort((a,b)=>a-b);
+  return {src:rec?'test':'list',date:rec&&rec.date,total:rec&&rec.total,qis,base:base.length,stars:stars.length};
+}
+function drillCount(uid){return drillSet(uid).qis.length}
+// 單元錯題練習：把該單元最後一次完測的錯題整批再練一次，不受到期日限制，可重複練
+function startDrill(uid){
+  pruneWrong();
+  const units=uid==='all'?BOOK.units.map(u=>String(u.id)):[String(uid)];
+  const list=[];
+  for(const u of units)for(const qi of drillSet(u).qis)list.push({uid:u,qi});
+  if(!list.length){alert(uid==='all'?'目前沒有可練習的錯題（先完成一次單元測驗吧）。':'單元 '+uid+' 目前沒有可練習的錯題。');return;}
+  const items=list.map(w=>({uid:w.uid,qi:w.qi,q:QUIZ[w.uid][w.qi],w}));
+  shuffle(items);
+  quizSession={mode:'drill',uid,items,idx:0,correct:0,answered:false,picks:[],results:[]};
+  cur='quiz';render();
+}
 function vQuizQ(){
   const ss=quizSession;
   if(ss.idx>=ss.items.length)return vQuizDone();
   const it=ss.items[ss.idx], q=it.q;
   let html=`<div class="card">
-    <div class="row spread"><span class="badge ${ss.mode==='review'?'b-warn':'b-blue'}">${ss.mode==='review'?'🔁 錯題複習':'單元 '+ss.uid+' 測驗'}</span>
-    <span class="muted">第 ${ss.idx+1} / ${ss.items.length} 題</span></div>
+    <div class="row spread"><span class="badge ${ss.mode==='quiz'?'b-blue':'b-warn'}">${sessLabel(ss)}</span>
+    <div class="row" style="gap:8px"><span class="muted">第 ${ss.idx+1} / ${ss.items.length} 題</span>
+      <button class="starbtn ${starred(it.uid,it.qi)?'on':''}" onclick="toggleStar('${it.uid}',${it.qi})"
+        title="${starred(it.uid,it.qi)?'已加入「📚 依單元練習錯題」，點一下取消':'把這題加入「📚 依單元練習錯題」重複練習'}"
+        aria-label="標記此題加入練習">${starred(it.uid,it.qi)?'★':'☆'}</button></div></div>
     <div class="bar"><div style="width:${Math.round(ss.idx/ss.items.length*100)}%"></div></div>
     <div class="qmeta">${q.type==='multi'?'<span class="badge b-warn">複選題</span>　選出所有正確答案後按「送出」，需全部選對':'<span class="badge b-blue">單選題</span>'}</div>
     <h3 style="margin:10px 0">${esc(q.q)}</h3>`;
@@ -663,6 +1420,9 @@ function record(it,ok){
   const ss=quizSession;
   if(ok)ss.correct++;
   ss.results.push({uid:it.uid,qi:it.qi,ok});
+  // 📚 依單元練習錯題：純練習，完全不動錯題清單與間隔複習排程。
+  // 練習題目來自「該單元最後一次完測」的錯題，只有再完測一次該單元才會換一批。
+  if(ss.mode==='drill')return;
   const found=S.wrong.find(w=>w.uid===it.uid&&w.qi===it.qi);
   if(!ok){
     if(found){found.streak=0;found.due=addDays(today(),1)}
@@ -675,6 +1435,11 @@ function record(it,ok){
   save();
 }
 function nextQ(){const ss=quizSession;ss.idx++;ss.answered=false;ss.pick=null;ss.picks=[];render()}
+function sessLabel(ss){
+  if(ss.mode==='review')return '🔁 錯題複習';
+  if(ss.mode==='drill')return ss.uid==='all'?'📚 錯題練習（全部單元）':'📚 單元 '+ss.uid+' 錯題練習';
+  return '單元 '+ss.uid+' 測驗';
+}
 function vQuizDone(){
   const ss=quizSession;
   const pct=Math.round(ss.correct/ss.items.length*100);
@@ -682,17 +1447,25 @@ function vQuizDone(){
     const st=ustate(ss.uid);
     if(st.best===null||pct>st.best)st.best=pct;
     S.history.push({date:today(),uid:ss.uid,score:ss.correct,total:ss.items.length});
+    // 覆寫該單元的「最後一次完測錯題」——📚 依單元練習錯題永遠練這一批，直到下次完測
+    S.lastWrong[ss.uid]={date:today(),total:ss.items.length,qis:ss.results.filter(r=>!r.ok).map(r=>r.qi)};
     save();
   }
-  const wrongN=ss.items.length-ss.correct;
+  const wrongN=ss.items.length-ss.correct, dUid=ss.uid;
   const msg=pct===100?'💯 全對！':pct>=80?'👍 不錯，錯題已排入複習':pct>=60?'📌 及格邊緣，建議重讀後再測':'⚠️ 建議回到閱讀頁重讀本單元';
   const html=`<div class="card" style="text-align:center;padding:36px">
     <div style="font-size:2.6rem;font-weight:800;color:${pct>=80?'var(--ok)':pct>=60?'var(--warn)':'var(--bad)'}">${pct}%</div>
     <div style="margin:6px 0">${ss.correct} / ${ss.items.length} 題正確　${msg}</div>
-    ${wrongN?`<div class="muted">答錯的 ${wrongN} 題已加入複習排程（明天到期）</div>`:''}
-    <div class="row" style="justify-content:center;margin-top:16px">
+    ${ss.mode==='drill'
+      ? `<div class="muted">練習模式<b>不會</b>改動錯題清單與複習排程${wrongN?`（本輪答錯 ${wrongN} 題）`:''}；作答時按 ★ 可把題目長期留在這份練習清單裡。
+         這批題目固定是${dUid==='all'?'各單元':'單元 '+dUid+' '}<b>最後一次完測</b>的錯題，再完測一次該單元才會換新。</div>`
+      : wrongN?`<div class="muted">答錯的 ${wrongN} 題已加入複習排程（明天到期）${ss.mode==='quiz'?`；「📚 依單元練習錯題」的單元 ${ss.uid} 已更新為本次錯的 ${wrongN} 題`:''}</div>`
+        :(ss.mode==='quiz'?`<div class="muted">全對！「📚 依單元練習錯題」的單元 ${ss.uid} 已清空</div>`:'')}
+    <div class="row" style="justify-content:center;margin-top:16px;flex-wrap:wrap">
       ${ss.mode==='quiz'?`<button class="ghost" onclick="startQuiz(${ss.uid})">再測一次</button>`:''}
-      <button class="act" onclick="quizSession=null;nav('dash')">回儀表板</button>
+      ${ss.mode==='drill'?`<button class="act" onclick="startDrill(${typeof dUid==='number'?dUid:"'"+dUid+"'"})">🔁 再練一次（重新洗牌）</button>
+        <button class="ghost" onclick="quizSession=null;nav('review')">回複習頁</button>`:''}
+      <button class="${ss.mode==='drill'?'ghost':'act'}" onclick="quizSession=null;nav('dash')">回儀表板</button>
     </div></div>`;
   quizSession=null;
   return html;
@@ -705,6 +1478,32 @@ function vReview(){
   let html=`<div class="card"><h2>🔁 錯題複習（間隔重複）</h2>
     <div class="muted" style="margin-bottom:10px">答錯 → 隔天再考；答對 → 間隔拉長（3、7、14 天）；連續兩次答對 → 畢業移除。</div>
     ${due.length?`<button class="act" onclick="startReview()">開始複習 ${due.length} 題到期錯題</button>`:'<span class="badge b-ok">今天沒有到期錯題 🎉</span>'}</div>`;
+  // 依單元重複練習錯題：來源＝該單元「最後一次完測」的錯題，與間隔複習排程完全脫鉤
+  pruneWrong();
+  let totalD=0, anyFallback=false;
+  let pills='';
+  for(const u of BOOK.units){
+    const d=drillSet(u.id), n=d.qis.length;
+    totalD+=n;
+    if(d.src==='list'&&n)anyFallback=true;
+    const tip=(d.src==='test'
+      ? `${d.date} 完測 ${d.total} 題，錯 ${d.base} 題`
+      : (d.base?'尚未完測過，暫時取自錯題清單（'+d.base+' 題）':'尚未完測，也沒有錯題記錄'))
+      +(d.stars?`；另有 ★ 標記 ${d.stars} 題`:'');
+    pills+=`<button class="ghost sm" ${n?'':'disabled'} title="${esc(u.title)}｜${tip}"
+      onclick="startDrill(${u.id})">單元 ${u.id}（${n}${d.src==='list'&&n?' ＊':''}）</button>`;
+  }
+  html+=`<div class="card"><h3>📚 依單元練習錯題</h3>
+    <div class="muted" style="font-size:.86rem;margin-bottom:10px">題目來源＝該單元<b>最後一次「完整測驗」答錯的題目</b>，加上你在作答時按 <b>★</b> 標記的題目，想練幾次就練幾次。
+      <br>這裡<b>不套用</b>間隔重複規則（不看到期日、不累積連對、不會畢業移除），練習結果也不會改動上方的錯題清單與複習排程。
+      <br>要換一批題目，就把該單元的測驗<b>再完整做一次</b>——完測結束時會自動用該次的錯題覆寫這裡。</div>
+    <div class="row" style="flex-wrap:wrap;gap:6px">${pills}</div>
+    <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">
+      <button class="act sm" ${totalD?'':'disabled'} onclick="startDrill('all')">📚 全部單元一起練（${totalD} 題）</button>
+      <button class="ghost sm" ${starCount()?'':'disabled'} onclick="clearStars()">☆ 清除全部 ★ 標記（${starCount()} 題）</button>
+    </div>
+    ${anyFallback?'<div class="muted" style="font-size:.8rem;margin-top:8px">＊ 該單元尚未完整測驗過，暫時改用「錯題清單」的題目；完測一次之後就會改成完測結果。</div>':''}
+    </div>`;
   if(S.wrong.length){
     html+=`<div class="card"><h3>錯題清單（${S.wrong.length} 題）</h3><table>
       <tr><th>到期日</th><th>單元</th><th>題目</th><th>連對</th></tr>`;
@@ -725,6 +1524,8 @@ function vStats(){
     <button class="ghost sm" onclick="document.getElementById('imp').click()">匯入進度</button>
     <input type="file" id="imp" accept=".json" style="display:none" onchange="impData(this)">
     <button class="ghost sm" style="color:var(--bad);border-color:var(--bad)" onclick="clearWrong()">清除錯題</button>
+    <button class="ghost sm" style="color:var(--bad);border-color:var(--bad)" onclick="clearMarks('all')">清除全部重點標記（${markCount('all')} 處）</button>
+    ${localUnits().length?`<button class="ghost sm" style="color:var(--warn);border-color:var(--warn)" onclick="noteRevertAll()">↩️ 全部改用檔案版重點（${localUnits().length} 單元）</button>`:''}
     <button class="ghost sm" style="color:var(--bad);border-color:var(--bad)" onclick="clearAll()">清除全部記錄</button></div></div>`;
   if(!S.history.length)html+='<div class="muted">尚無測驗記錄。</div>';
   else{
@@ -733,7 +1534,7 @@ function vStats(){
       html+=`<tr><td>${h.date}</td><td>單元 ${h.uid}</td><td>${h.score}/${h.total}（${Math.round(h.score/h.total*100)}%）</td></tr>`;
     html+='</table>';
   }
-  return html+`</div><div class="card"><h3>⚠️ 資料說明</h3><div class="muted">進度存在這台電腦的瀏覽器（localStorage）。換電腦或清瀏覽器資料前，請先「匯出進度」備份。<br>📌 <b>「匯出／匯入」也包含「📌重點」裡『標記模式』的螢光筆標記</b>，換裝置可帶著走；惟若之後重點文字有更新，已標記處的位置可能對不準。</div></div>`;
+  return html+`</div><div class="card"><h3>⚠️ 資料說明</h3><div class="muted">進度存在這台電腦的瀏覽器（localStorage）。換電腦或清瀏覽器資料前，請先「匯出進度」備份。<br>📌 <b>「匯出／匯入」也包含「📌重點」裡『標記模式』的螢光筆底色與字樣調整（粗體／紅字／藍字／一般）</b>，換裝置可帶著走；惟若之後重點文字有更新，已標記處的位置可能對不準。<br>🗑️ <b>「清除全部記錄」只清測驗相關資料</b>，你的標記與網頁內編輯的重點會保留。</div></div>`;
 }
 function clearWrong(){
   if(!S.wrong.length){alert('目前沒有錯題記錄。');return;}
@@ -741,8 +1542,9 @@ function clearWrong(){
   S.wrong=[];save();render();
 }
 function clearAll(){
-  if(!confirm('確定清除「全部記錄」？包含測驗成績、錯題清單、各單元已讀/最佳成績，且無法復原。建議先「匯出進度」備份。'))return;
-  S={units:{},wrong:[],history:[],log:[]};save();render();
+  if(!confirm('確定清除「全部記錄」？包含測驗成績、錯題清單、各單元已讀/最佳成績，且無法復原。建議先「匯出進度」備份。\n\n（你的重點標記與網頁內編輯的重點會保留）'))return;
+  S=normS({hl:S.hl, fmt:S.fmt, notesEdit:S.notesEdit});   // 只清測驗相關；標記與本機編輯保留
+  save();render();
 }
 function expData(){
   const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
@@ -752,7 +1554,7 @@ function expData(){
 function impData(inp){
   const f=inp.files[0];if(!f)return;
   const r=new FileReader();
-  r.onload=()=>{try{S=JSON.parse(r.result);save();render();alert('匯入完成')}catch(e){alert('檔案格式錯誤')}};
+  r.onload=()=>{try{S=normS(JSON.parse(r.result));save();render();alert('匯入完成')}catch(e){alert('檔案格式錯誤')}};
   r.readAsText(f);
 }
 render();
