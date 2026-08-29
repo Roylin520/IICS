@@ -208,7 +208,7 @@ window.SLIDE_TOC = {
       },
       {
         "no": "6-9",
-        "title": "VANS弱點管理",
+        "title": "資通安全弱點管理",
         "p": 120
       },
       {

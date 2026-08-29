@@ -175,6 +175,9 @@ em.ck{font-style:normal;font-weight:700;color:#b91c1c}
 .opt:disabled{cursor:default}
 .expl{border-left:4px solid var(--brand);background:var(--brand-soft);padding:10px 14px;border-radius:0 8px 8px 0;margin-top:10px;font-size:.93rem}
 .qmeta{font-size:.85rem;color:var(--muted);margin-bottom:8px}
+.ansmsg{margin-top:10px;padding:9px 14px;border-radius:8px;font-weight:700;font-size:.97rem;border:1.5px solid}
+.ansmsg.ok{color:var(--ok);background:var(--ok-soft);border-color:var(--ok)}
+.ansmsg.bad{color:var(--bad);background:var(--bad-soft);border-color:var(--bad)}
 .anskey{background:var(--ok-soft);border-radius:8px;padding:10px 14px;margin-top:10px;font-size:.95rem}
 table{width:100%;border-collapse:collapse;font-size:.92rem}
 th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--line)}
@@ -435,7 +438,7 @@ function linkSlideRefs(s){
 }
 function vRead(){
   const u=BOOK.units.find(x=>x.id===readerUnit);
-  // 工具列：閱讀頁自 2026-08-27 起只讀課程簡報（11504），教材原書與讀物標籤皆已移除
+  // 工具列：閱讀頁自 2026-08-27 起只讀課程簡報（2026-08-29 更新為 11508），教材原書與讀物標籤皆已移除
   const sel=`<div class="docsel">
     <button class="docbtn" title="把左側章節收起來，閱讀區變寬" onclick="tocOpen=!tocOpen;nav('read')">${tocOpen?'◀ 收合章節':'▶ 展開章節'}</button></div>`;
   // 說明橫幅已於 2026-08-27 移除；只在「從重點跳到某張投影片」時，於章節欄上方留一顆小返回鈕
@@ -808,9 +811,7 @@ function vNotes(){
           <input type="checkbox" ${editMode?'checked':''} onchange="editMode=this.checked;markMode=false;recallMode=false;hideBar();nav('notes')">
           ✍️ 編輯模式</label>`}</div></div>
     <div class="row" style="gap:8px;margin-top:10px">
-      <span class="muted" style="font-size:.82rem"><b>依課程簡報（11504）逐張整理</b>，法規一律採<b>現行值</b>；教材舊值只留在「🔀 差異」頁。
-      標題標 <b>（教材補充）</b>者為簡報沒有、教材才有的內容，標 <b>（教材補充_內容重疊）</b>者與前面的簡報版說法重複，可快速略過。
-      內文為純文字，要標重點請開「✏️ 標記模式」自己標。</span></div>
+      <span class="muted" style="font-size:.82rem"><b>依課程簡報（11508版本為主、11508教材為輔）逐張整理</b>，要標重點請開「✏️ 標記模式」自己標。</span></div>
     <div style="margin-top:10px"><div class="upills">${pills}</div></div></div>`;
   if(markMode) html+=markCard();
   if(!n){
@@ -1320,7 +1321,7 @@ function vQuizPick(bank){
   return html+'</div>';
 }
 function startQuiz(uid){
-  const qs=QUIZ[uid].map((q,i)=>({uid,qi:i,q}));
+  const qs=QUIZ[uid].map((q,i)=>({uid,qi:i,q:shufOpts(q)}));
   shuffle(qs);
   quizSession={mode:'quiz',uid,items:qs,idx:0,correct:0,answered:false,picks:[],results:[]};
   cur=isR(uid)?'quiz2':'quiz';render();
@@ -1328,7 +1329,7 @@ function startQuiz(uid){
 function startReview(){
   const due=dueWrongs();
   if(!due.length)return;
-  const items=due.map(w=>({uid:w.uid,qi:w.qi,q:QUIZ[w.uid][w.qi],w}));
+  const items=due.map(w=>({uid:w.uid,qi:w.qi,q:shufOpts(QUIZ[w.uid][w.qi]),w}));
   shuffle(items);
   quizSession={mode:'review',items,idx:0,correct:0,answered:false,picks:[],results:[]};
   cur='quiz';render();
@@ -1374,10 +1375,18 @@ function startDrill(uid){
   const list=[];
   for(const u of units)for(const qi of drillSet(u).qis)list.push({uid:u,qi});
   if(!list.length){alert(uid==='all'?'目前沒有可練習的錯題（先完成一次單元測驗吧）。':uLabel(uid)+' 目前沒有可練習的錯題。');return;}
-  const items=list.map(w=>({uid:w.uid,qi:w.qi,q:QUIZ[w.uid][w.qi],w}));
+  const items=list.map(w=>({uid:w.uid,qi:w.qi,q:shufOpts(QUIZ[w.uid][w.qi]),w}));
   shuffle(items);
   quizSession={mode:'drill',uid,items,idx:0,correct:0,answered:false,picks:[],results:[]};
   cur=uid!=='all'&&isR(uid)?'quiz2':'quiz';render();
+}
+/* 作答結果提示：色弱使用者只看顏色分不出對錯，所以一律附文字與圖示。 */
+function ansBanner(ss,q){
+  const L='ABCDEF';
+  if(ss.ok)return '<div class="ansmsg ok" role="status">✅ 答對</div>';
+  const key=Array.isArray(q.ans)?q.ans.map(i=>L[i]).join('、'):L[q.ans];
+  const hint=Array.isArray(q.ans)?'（虛線框＝應選未選）':'';
+  return `<div class="ansmsg bad" role="status">❌ 答錯，正解為 ${key}${hint}</div>`;
 }
 function vQuizQ(){
   const ss=quizSession;
@@ -1408,14 +1417,14 @@ function vQuizQ(){
       return `<button class="${cls}" ${ss.answered?'disabled':''} ${click}>${L[i]}. ${esc(o)}</button>`;
     }).join('');
     if(!ss.answered)html+=`<div style="margin-top:10px"><button class="act" ${ss.picks.length?'':'disabled'} onclick="answerMulti()">送出答案</button></div>`;
-    else html+=`<div class="expl">正解：${ansArr.map(i=>L[i]).join('、')}（虛線框＝應選未選）<br>📖 ${linkSlideRefs(q.ref)}　${esc(q.expl||'')}</div>`;
+    else html+=ansBanner(ss,q)+`<div class="expl">📖 ${linkSlideRefs(q.ref)}　${esc(q.expl||'')}</div>`;
   }else{
     html+=q.opts.map((o,i)=>{
       let cls='opt',dis=ss.answered?'disabled':'';
       if(ss.answered){if(i===q.ans)cls+=ss.pick===i?' sel-ok':' reveal';else if(i===ss.pick)cls+=' sel-bad'}
       return `<button class="${cls}" ${dis} onclick="answerMC(${i})">${L[i]}. ${esc(o)}</button>`;
     }).join('');
-    if(ss.answered)html+=`<div class="expl">📖 ${linkSlideRefs(q.ref)}　${esc(q.expl||'')}</div>`;
+    if(ss.answered)html+=ansBanner(ss,q)+`<div class="expl">📖 ${linkSlideRefs(q.ref)}　${esc(q.expl||'')}</div>`;
   }
   if(ss.answered)html+=`<div style="margin-top:12px"><button class="act" onclick="nextQ()">下一題 →</button></div>`;
   return html+'</div>';
@@ -1423,7 +1432,8 @@ function vQuizQ(){
 function answerMC(i){
   const ss=quizSession;if(ss.answered)return;
   ss.answered=true;ss.pick=i;
-  record(ss.items[ss.idx], i===ss.items[ss.idx].q.ans);
+  ss.ok=(i===ss.items[ss.idx].q.ans);
+  record(ss.items[ss.idx], ss.ok);
   render();
 }
 function togglePick(i){
@@ -1435,7 +1445,8 @@ function answerMulti(){
   const ss=quizSession;if(ss.answered||!ss.picks.length)return;
   ss.answered=true;
   const ans=[...ss.items[ss.idx].q.ans].sort().join(),got=[...ss.picks].sort().join();
-  record(ss.items[ss.idx], ans===got);
+  ss.ok=(ans===got);
+  record(ss.items[ss.idx], ss.ok);
   render();
 }
 function record(it,ok){
@@ -1456,7 +1467,7 @@ function record(it,ok){
   }
   save();
 }
-function nextQ(){const ss=quizSession;ss.idx++;ss.answered=false;ss.pick=null;ss.picks=[];render()}
+function nextQ(){const ss=quizSession;ss.idx++;ss.answered=false;ss.pick=null;ss.picks=[];ss.ok=null;render()}
 function sessLabel(ss){
   if(ss.mode==='review')return '🔁 錯題複習';
   if(ss.mode==='drill')return ss.uid==='all'?'📚 錯題練習（全部單元）':'📚 '+uLabel(ss.uid)+' 錯題練習';
@@ -1493,6 +1504,17 @@ function vQuizDone(){
   return html;
 }
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}}
+/* 作答時連「選項順序」一起打散（ans 跟著換），避免記位置不記內容。
+   回傳題目的淺複本，QUIZ 原始資料完全不動。
+   前提是解析不得引用 A/B/C/D 字母——兩套題庫已於 2026-08-29 全面清乾淨。 */
+function shufOpts(q){
+  const idx=q.opts.map((_,i)=>i);
+  shuffle(idx);
+  const back=[];idx.forEach((old,now)=>{back[old]=now});   // 原索引 → 新索引
+  return {...q,
+    opts:idx.map(i=>q.opts[i]),
+    ans:Array.isArray(q.ans)?q.ans.map(i=>back[i]).sort((x,y)=>x-y):back[q.ans]};
+}
 
 /* ============ 複習 ============ */
 function vReview(){
