@@ -297,7 +297,7 @@ function save(){localStorage.setItem(KEY,JSON.stringify(S))}
 function ustate(id){return S.units[id]||(S.units[id]={read:false,best:null})}
 
 /* ============ 導覽 ============ */
-const TABS=[['dash','🏠 儀表板'],['read','📚 閱讀'],['notes','📌 重點'],['exam','🎯 歷史考題'],['cram','⚡ 快速記憶'],['quiz','✏️ 測驗'],['quiz2','📝 測驗(換證)'],['review','🔁 複習'],['stats','📊 記錄']];
+const TABS=[['dash','🏠 儀表板'],['read','📚 閱讀'],['notes','📌 重點'],['exam','🎯 歷史考題'],['cram','⚡ 快速記憶'],['quiz','✏️ 測驗(首次取證)'],['quiz2','📝 測驗(換證)'],['review','🔁 複習'],['stats','📊 記錄']];
 let cur='dash', readerUnit=1, quizSession=null, navOpen=false, notesSubOpen=false;
 let cramUnit=1, cramAll=false, cramMark=false, cramEdit=false;
 let examUnit=0, examMark=false;   // 🎯 歷史考題：examUnit=0 代表「全部單元」
@@ -789,7 +789,7 @@ function vExam(){
     <div style="font-size:1.6rem">🌱</div><div>尚未建立歷史考題重點</div>
     <div class="muted" style="margin-top:6px">執行 <code>python web/build_exam.py</code> 產生 <code>web/data/exam.js</code>。</div></div>`;
   html+=(examUnit?[examUnit]:ids).map(examUnitHTML).join('');
-  html+=`<div class="card muted" style="font-size:.85rem">這些是考古題打過的地方，讀完建議到「✏️ 測驗」把對應單元再考一輪；
+  html+=`<div class="card muted" style="font-size:.85rem">這些是考古題打過的地方。
     要看該重點的前後文，按各單元右上角的「📌 看完整重點」。</div>`;
   return html;
 }
@@ -859,7 +859,7 @@ function vNotes(){
     html+='</div>';
   }
   html+=`<div class="card muted" style="font-size:.85rem">⭐＝測驗常考點（⭐⭐⭐＝教材補充中最關鍵者）。
-    看完重點建議直接到「✏️ 測驗」考一輪，答錯會自動進複習排程。</div>`;
+    看完重點建議直接到「✏️ 測驗(首次取證或換證)」考一輪，答錯會自動進複習排程。</div>`;
   return html;
 }
 /* ============ 重點編輯器（編輯模式） ============ */
@@ -1300,16 +1300,16 @@ function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g
 /* ---- 單元代號：一般題庫＝數字 1～9；換證題庫＝字串 "R1"～"R9" ---- */
 const isR=uid=>String(uid).charAt(0)==='R';                      // 是否為換證題庫
 const uNum=uid=>String(uid).replace(/^R/,'');                    // 取單元數字
-const uLabel=uid=>'單元 '+uNum(uid)+(isR(uid)?'（換證）':'');       // 顯示用
+const uLabel=uid=>'單元 '+uNum(uid)+(isR(uid)?'（換證）':'（首次取證）'); // 顯示用
 const uArg=uid=>typeof uid==='number'?String(uid):"'"+uid+"'";    // 塞進 onclick 的字面值
 function vQuiz(){return vQuizPick('')}
 function vQuizR(){return vQuizPick('R')}
 function vQuizPick(bank){
   if(quizSession)return vQuizQ();
   const isRB=bank==='R';
-  let html=`<div class="card"><h2>${isRB?'📝 測驗(換證)：選擇要測驗的單元':'選擇要測驗的單元'}</h2>
+  let html=`<div class="card"><h2>${isRB?'📝 測驗(換證)：選擇要測驗的單元':'✏️ 測驗(首次取證)：選擇要測驗的單元'}</h2>
     <div class="muted" style="margin-bottom:10px">一次一題，答錯自動加入複習排程（+1、+3、+7、+14 天）。
-    ${isRB?'本題庫<b>全部為單選題</b>，依各單元「📌 重點（主線）」逐條命題並含情境題，與「✏️ 測驗」的題庫各自獨立、成績分開計算。'
+    ${isRB?'本題庫<b>全部為單選題</b>，依各單元「📌 重點（主線）」逐條命題並含情境題，與「✏️ 測驗(首次取證)」的題庫各自獨立、成績分開計算。'
           :'題目含<b>單選與複選</b>，複選需全部選對。'}</div></div><div class="grid">`;
   for(const u of BOOK.units){
     const uid=bank+u.id, arr=QUIZ[uid]||[], has=arr.length>0, st=ustate(uid);
