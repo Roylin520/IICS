@@ -73,6 +73,11 @@ a.ghost:hover{background:var(--brand-soft)}
 .bm-s .pg{color:var(--muted);font-size:.78rem;white-space:nowrap}
 .pdfwrap{padding:0;overflow:hidden}
 .pdfwrap iframe{display:block;width:100%;height:calc(100vh - 150px);border:none}
+/* iPad／iPhone Safari 的 100vh 含工具列高度，會讓底部被切掉；支援 dvh 的瀏覽器改用 dvh */
+@supports (height:100dvh){
+  .pdfwrap iframe{height:calc(100dvh - 150px)}
+  .toc{max-height:calc(100dvh - 90px)}
+}
 /* 收合左側章節 → 閱讀區佔滿寬度 */
 .reader.notoc{grid-template-columns:1fr}
 .reader.notoc>.toc{display:none}
@@ -80,6 +85,14 @@ a.ghost:hover{background:var(--brand-soft)}
 .docsel{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .docbtn{background:#fff;border:1px solid var(--line);color:var(--ink);padding:6px 12px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.88rem}
 .docbtn.on{background:var(--brand);color:#fff;border-color:var(--brand);font-weight:700}
+/* 平台切換（Windows／Mac・iPad）：靠右的分段按鈕，只影響閱讀頁的 PDF 顯示方式 */
+.platsw{margin-left:auto;display:flex;align-items:center;gap:4px}
+.platsw .lbl{color:var(--muted);font-size:.8rem;margin-right:2px}
+.platsw .docbtn{border-radius:0;margin:0}
+.platsw .docbtn:first-of-type{border-radius:8px 0 0 8px}
+.platsw .docbtn:last-of-type{border-radius:0 8px 8px 0;border-left:none}
+.platsw .docbtn.on+.docbtn{border-left:1px solid var(--brand)}
+@media (max-width:640px){.platsw{margin-left:0;width:100%}.platsw .docbtn{flex:1}}
 /* 從重點跳到某張投影片時，章節欄上方的小返回鈕 */
 .backstart{display:block;width:100%;margin-bottom:6px;padding:5px 8px;border:1px solid #93c5fd;
   background:var(--brand-soft);color:var(--brand);border-radius:7px;cursor:pointer;
@@ -275,6 +288,7 @@ function normS(s){   // 補齊缺欄位（舊版備份／匯入的檔案可能�
   s.cramEdit=s.cramEdit||{}; s.cramTitle=s.cramTitle||{};   // 網頁「⚡ 快速記憶 → ✍️ 編輯模式」改過的區塊／單元名稱（本機保存）
   s.lastWrong=s.lastWrong||{};   // lastWrong[單元]={date,total,qis:[題號]}＝該單元最後一次完測答錯的題目（供「依單元練習錯題」使用）
   s.star=s.star||{};             // star[單元]=[題號]＝作答時按 ★ 手動加入練習的題目（不受完測覆寫影響）
+  s.plat=s.plat||'';             // 平台模式：''＝自動偵測、'win'＝Windows、'mac'＝Mac／iPad（見 plat()）
   return migrateWrong(s);
 }
 function migrateWrong(s){
@@ -328,7 +342,7 @@ function render(){
   const m=document.getElementById('main');
   m.classList.toggle('wide',cur==='read');
   if(cur==='dash')m.innerHTML=vDash();
-  else if(cur==='read')m.innerHTML=vRead();
+  else if(cur==='read')renderRead(m);
   else if(cur==='notes')m.innerHTML=vNotes();
   else if(cur==='cram')m.innerHTML=vCram();
   else if(cur==='exam')m.innerHTML=vExam();
@@ -403,9 +417,31 @@ function unitOfSlide(d,p){
   }
   return best===null?null:+best;
 }
+/* ---- 平台模式：Windows ／ Mac・iPad ----
+   Windows 的 Chrome/Edge 內建 PDF 檢視器支援 #page 跳頁，直接內嵌最省事。
+   但 macOS／iPadOS Safari 內嵌 PDF 用的是系統 PDFKit：只顯示第一頁、不能捲動，
+   而且 #page=N 參數被忽略，左側點小節「跳投影片」完全無效——同事的 iPad 就是卡在這裡。
+   所以 Mac 模式改用專案內建的 pdf.js（web/vendor/pdfjs，v6.3.289 legacy）自行渲染，
+   捲動、跳頁、搜尋都正常，且不需連外網。切換鈕在閱讀頁工具列右側。 */
+const PDFJS_VIEWER='vendor/pdfjs/web/viewer.html';
+function platAuto(){          // 沒手動選過時，用 UA 猜；iPadOS 的「桌面版網站」會自稱 Macintosh，靠觸控點數補判
+  const ua=navigator.userAgent||'';
+  if(/iPad|iPhone|iPod/.test(ua))return 'mac';
+  if(/Macintosh|Mac OS X/.test(ua))return 'mac';
+  if(navigator.maxTouchPoints>1&&/Safari/.test(ua)&&!/Chrome|Chromium|Edg/.test(ua))return 'mac';
+  return 'win';
+}
+function plat(){return S.plat||platAuto()}
+function setPlat(p){S.plat=p;save();pdfCur=null;render()}
+// 產生 iframe 網址：win＝瀏覽器內建檢視器；mac＝pdf.js 檢視器（file 參數是相對 viewer.html 的路徑）
+function pdfSrc(f,pg){
+  if(plat()==='mac')
+    return `${PDFJS_VIEWER}?file=${encodeURIComponent('../../../'+f)}#page=${pg}&zoom=page-width`;
+  return `${f}#page=${pg}&zoom=page-width`;
+}
 // 重點內文的簡報連結一律「另開分頁」，不離開正在讀的重點。
 // 用真的 <a target="_blank">（而非 window.open）：不會被彈出視窗阻擋，也支援中鍵／Ctrl+點。
-function slideHref(d,p){return `slide_day${d}.pdf#page=${p}&zoom=page-width`}
+function slideHref(d,p){return pdfSrc('slide_day'+d+'.pdf',p)}
 // 在 App 內切到閱讀頁的該張投影片（閱讀頁左側章節、重點頁的簡報頁碼連結用）
 function gotoSlide(d,p){
   slideJump={d:+d,p:+p};
@@ -436,22 +472,82 @@ function linkSlideRefs(s){
     // 「day2 p.4」形式
     .replace(/day\s*([1-3])\s*p\.(\d{1,3})/g,(m,d,p)=>a(m,d,p));
 }
-function vRead(){
+// 目前閱讀頁要顯示的簡報檔與頁次
+function readTarget(){
+  const sd=UNIT_SLIDE[readerUnit]||UNIT_SLIDE[1];
+  return slideJump?{f:'slide_day'+slideJump.d+'.pdf',p:slideJump.p}:{f:sd.f,p:sd.p};
+}
+// 工具列：閱讀頁自 2026-08-27 起只讀課程簡報（2026-08-29 更新為 11508），教材原書與讀物標籤皆已移除
+function readBar(){
+  const p=plat(), auto=!S.plat;
+  return `<button class="docbtn" title="把左側章節收起來，閱讀區變寬" onclick="tocOpen=!tocOpen;nav('read')">${tocOpen?'◀ 收合章節':'▶ 展開章節'}</button>
+  <span class="platsw">
+    <span class="lbl" title="${auto?'目前是自動偵測的結果，按下任一顆即固定':'已手動指定'}">簡報顯示方式${auto?'（自動）':''}</span>
+    <button class="docbtn ${p==='win'?'on':''}" onclick="setPlat('win')"
+      title="Windows／Android 的 Chrome、Edge：用瀏覽器內建的 PDF 檢視器，開得最快">🪟 Windows</button>
+    <button class="docbtn ${p==='mac'?'on':''}" onclick="setPlat('mac')"
+      title="iPad／iPhone／Mac 的 Safari：改用內建 pdf.js 顯示，才能捲動與跳頁">🍎 Mac／iPad</button>
+  </span>`;
+}
+// 左欄：只在「從重點跳到某張投影片」時，於章節欄上方留一顆小返回鈕
+function readToc(){
   const u=BOOK.units.find(x=>x.id===readerUnit);
-  // 工具列：閱讀頁自 2026-08-27 起只讀課程簡報（2026-08-29 更新為 11508），教材原書與讀物標籤皆已移除
-  const sel=`<div class="docsel">
-    <button class="docbtn" title="把左側章節收起來，閱讀區變寬" onclick="tocOpen=!tocOpen;nav('read')">${tocOpen?'◀ 收合章節':'▶ 展開章節'}</button></div>`;
-  // 說明橫幅已於 2026-08-27 移除；只在「從重點跳到某張投影片」時，於章節欄上方留一顆小返回鈕
-  const toc=`${slideJump?`<button class="backstart" onclick="slideJump=null;nav('read')" title="回到單元 ${readerUnit} 的起始投影片">↩ 回本單元起始頁</button>`:''}
+  return `${slideJump?`<button class="backstart" onclick="slideJump=null;nav('read')" title="回到單元 ${readerUnit} 的起始投影片">↩ 回本單元起始頁</button>`:''}
     <div class="row spread" style="margin-bottom:4px">
     <span class="muted" style="font-size:.82rem">👈 點單元切換簡報、點小節直接跳該張</span>
     <button class="ghost sm" onclick="toggleRead(${u.id})">${ustate(u.id).read?'✓ 已讀':'標為已讀'}</button></div>`
     +tocUnits();
-  const sd=UNIT_SLIDE[readerUnit]||UNIT_SLIDE[1];
-  const f=slideJump?('slide_day'+slideJump.d+'.pdf'):sd.f;
-  const pg=slideJump?slideJump.p:sd.p;
-  const body=`<div class="card pdfwrap"><iframe id="pdfframe" src="${f}#page=${pg}&zoom=page-width"></iframe></div>`;
-  return `${sel}<div class="reader${tocOpen?'':' notoc'}"><div class="card toc">${toc}</div>${body}</div>`;
+}
+function vRead(){
+  const t=readTarget();
+  return `<div class="docsel" id="readbar">${readBar()}</div>
+    <div class="reader${tocOpen?'':' notoc'}"><div class="card toc" id="readtoc">${readToc()}</div>
+    <div class="card pdfwrap"><iframe id="pdfframe" src="${pdfSrc(t.f,t.p)}"></iframe></div></div>`;
+}
+/* 閱讀頁的渲染：Mac 模式（pdf.js）同一份簡報只換頁、不重建 iframe，
+   否則每點一個小節都要重新下載 4～6 MB 的 PDF，iPad 上會等很久。
+   Windows 模式維持原本行為（重建 iframe，靠 #page 跳頁）。 */
+let pdfCur=null;   // 目前 iframe 已載入的 {mode,f}
+function renderRead(m){
+  const t=readTarget(), fr=document.getElementById('pdfframe');
+  if(fr&&pdfCur&&pdfCur.mode==='mac'&&plat()==='mac'&&pdfCur.f===t.f&&document.querySelector('.reader')){
+    document.getElementById('readbar').innerHTML=readBar();
+    document.getElementById('readtoc').innerHTML=readToc();
+    document.querySelector('.reader').className='reader'+(tocOpen?'':' notoc');
+    pdfGoto(t.p);
+    return;
+  }
+  m.innerHTML=vRead();
+  pdfCur={mode:plat(),f:t.f};
+  // 網址的 #page 在 page-width 縮放後有時會落差一頁，檢視器載入過程也會自己捲；
+  // 記下目標頁並掛上事件，載完後由 pdfBind() 補設，落點才準
+  if(plat()==='mac'){pdfWant=t.p;pdfBind();pdfGoto(t.p);}
+}
+// 取得閱讀頁 iframe 裡的 pdf.js 應用程式物件（同源，取不到就回 null）
+function pdfApp(){
+  const fr=document.getElementById('pdfframe'); if(!fr)return null;
+  try{return fr.contentWindow&&fr.contentWindow.PDFViewerApplication||null}catch(e){return null}
+}
+let pdfWant=null;   // 目前想停在第幾張投影片
+// 叫 pdf.js 檢視器跳到第 pg 頁；檢視器還在載入就等一下再試（每 160ms，最多約 8 秒）
+function pdfGoto(pg,tries){
+  if(!tries)pdfWant=pg;
+  const app=pdfApp();
+  if(app&&app.pdfDocument){try{app.page=pdfWant;return}catch(e){}}
+  if((tries||0)<50)setTimeout(()=>pdfGoto(pg,(tries||0)+1),160);
+}
+/* 檔案剛開時，pdf.js 會在 pagesinit／pagesloaded 依網址 #page 與「上次看到哪」自己捲一次，
+   會蓋掉我們設的頁。每建一個新 iframe 就掛一次這兩個事件，事件來時再設成 pdfWant。
+   只在 iframe 新建時掛，換頁不會累積監聽器。 */
+function pdfBind(tries){
+  const app=pdfApp();
+  if(app&&app.eventBus){
+    ['pagesinit','pagesloaded'].forEach(ev=>app.eventBus.on(ev,()=>{
+      if(pdfWant)try{app.page=pdfWant}catch(e){}
+    }));
+    return;
+  }
+  if((tries||0)<50)setTimeout(()=>pdfBind((tries||0)+1),160);
 }
 // 左側章節清單（單元＋目前單元的小節）
 function tocUnits(){
