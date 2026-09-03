@@ -1668,13 +1668,16 @@ function vReview(){
    測驗成績、錯題清單、★ 標記會整組消失。所以只要填了「使用者代號」，每次存檔就順手把
    整包進度備份到「這台主機」（跑 save_server.py 的那台電腦），下次打開若本機是空的
    會自動接回來。全程在區網內，資料只落在該台電腦的 study/progress_web/，不送到任何外部服務。 */
-const SYNC={state:'idle', at:'', err:'', newer:'', users:null, restored:false};
+const SYNC={state:'idle', at:'', err:'', newer:'', users:null, restored:false, avail:null};
+// avail：這個網站有沒有備份功能。null＝還沒測、true＝有（本機 save_server.py）、
+// false＝沒有（GitHub Pages 之類的靜態網站，或直接雙擊 index.html）。
+// false 時不再重試上傳，記錄頁改顯示「用匯出／匯入備份」的做法。
 // state：'idle'＝沒設代號、'saving'、'ok'、'error'（連不到主機，例如用 file:// 或 http.server 開）
 let syncTimer=null, syncLast='';
 function syncUser(){return (S.user||'').trim()}
 function syncOn(){return !!syncUser()}
 function syncSoon(){                       // save() 每次都會叫，節流 1.5 秒才真的送
-  if(!syncOn())return;
+  if(!syncOn()||SYNC.avail===false)return;
   clearTimeout(syncTimer);
   syncTimer=setTimeout(()=>syncPut(),1500);
 }
@@ -1692,8 +1695,8 @@ async function syncPut(manual){
     S.syncAt=j.savedAt; syncStash();
     if(manual)alert('已備份到主機（'+j.savedAt.replace('T',' ')+'）');
   }catch(e){
-    SYNC.state='error'; SYNC.err=e.message||String(e);
-    if(manual)alert('備份失敗：'+SYNC.err+'\n\n要備份必須用「啟動陪讀系統.bat」啟動的網址開啟；直接雙擊 index.html 沒有伺服器可存。');
+    SYNC.state='error'; SYNC.err=e.message||String(e); SYNC.avail=false;
+    if(manual)alert('備份失敗：'+SYNC.err+'\n\n這個網站沒有備份功能（GitHub Pages 之類的靜態網站無法存檔）。\n請改用下方的「匯出進度」把檔案存起來。');
   }
   syncPaint();
 }
@@ -1730,8 +1733,19 @@ function syncEmpty(){
 async function syncWho(){
   try{const r=await fetch('whoami');const j=await r.json();return (j.ok&&j.user)||''}catch(e){return ''}
 }
+// 先探測這個網站有沒有備份端點；GitHub Pages 之類的靜態站會拿到 404
+async function syncProbe(){
+  try{
+    const r=await fetch('list/progress');
+    const j=r.ok?await r.json():null;
+    SYNC.avail=!!(j&&j.ok);
+  }catch(e){SYNC.avail=false}
+  return SYNC.avail;
+}
 // 開頁時跑一次：本機空的就自動接回；主機版本較新就提示（不強迫覆蓋）
 async function syncBoot(){
+  if(SYNC.avail===null)await syncProbe();
+  if(!SYNC.avail){render();return}
   if(!syncOn()){
     // localStorage 被清掉時連代號都會不見（Safari 的 7 天清除），用主機的 cookie 認回來。
     // 只在「本機確實是空的」時才認，免得蓋掉別人正在用的資料。
@@ -1754,6 +1768,7 @@ async function syncBoot(){
   }catch(e){SYNC.state='error'; SYNC.err=e.message||String(e); syncPaint()}
 }
 async function syncUsers(){                            // 主機上已有哪些代號（換裝置時方便對）
+  if(SYNC.avail===false){SYNC.users=[];return}
   try{const r=await fetch('list/progress');const j=await r.json();SYNC.users=j.ok?j.users:[]}
   catch(e){SYNC.users=[]}
   if(cur==='stats')render();
@@ -1768,6 +1783,7 @@ function syncSetUser(){
   if(v)syncBoot().then(()=>{syncUsers();render()}); else render();
 }
 function syncStateText(){
+  if(SYNC.avail===false)return '這個網站沒有備份功能，進度只存在這台裝置的瀏覽器。';
   if(!syncOn())return '⚠️ 尚未設定代號：進度只存在這台裝置的瀏覽器，清掉就沒了。';
   if(SYNC.state==='saving')return '⏳ 備份中…';
   if(SYNC.state==='error')return '❌ 連不到主機（'+SYNC.err+'）：目前只存在這台裝置。要備份請改用「啟動陪讀系統.bat」啟動的網址開啟。';
@@ -1776,6 +1792,7 @@ function syncStateText(){
 }
 function syncPaint(){const el=document.getElementById('syncstate');if(el)el.textContent=syncStateText()}
 function syncCard(){
+  if(SYNC.avail===false)return syncCardStatic();
   const u=syncUser();
   const list=(SYNC.users&&SYNC.users.length)
     ? '<div class="muted" style="margin-top:8px">主機上已有的代號：'
@@ -1796,6 +1813,20 @@ function syncCard(){
     <button class="ghost sm" onclick="syncPull()">⬇️ 取回</button></div>`:''}
   ${list}</div>`;
 }
+/* 靜態網站（GitHub Pages、或直接雙擊 index.html）沒有伺服器可以存檔，
+   自動備份一定失敗。這時改教使用者用「匯出／匯入」自己保管一份，
+   並提醒 Safari 的 7 天清除規則其實是「7 天內沒造訪才清」——每週開一次就會重新計時。 */
+function syncCardStatic(){
+  return `<div class="card"><h3>💾 進度要自己備份</h3>
+  <div class="muted">你的測驗成績、錯題、複習排程與所有標記，<b>只存在這台裝置的瀏覽器裡</b>，不會上傳到任何地方，換一台裝置也看不到。
+  這個網站是唯讀的靜態網頁，沒有辦法幫你保管。</div>
+  <div class="muted" style="margin-top:8px">
+  ⚠️ <b>iPad／iPhone 特別注意</b>：Safari 會把「連續 7 天沒開過」的網站資料整組清掉，成績與標記會不見。兩個做法：<br>
+  ① <b>每週至少開一次這個網站</b>——只要有造訪，7 天就重新計時，資料不會被清。<br>
+  ② <b>定期按下方的「匯出進度」</b>：會下載一個 json 檔（iPhone／iPad 會存進「檔案」App）。萬一資料真的不見了，或換了新裝置，用「匯入進度」把那個檔案讀回來就全部復原。</div>
+  <div class="muted" style="margin-top:8px">📌 建議把這個網站<b>加入主畫面</b>（Safari 分享鈕 → 加入主畫面），下次一點就開，也比較不會忘記回來。</div>
+  <div class="muted" id="syncstate" style="margin-top:8px">${syncStateText()}</div></div>`;
+}
 // 儀表板上的一行提示（剛自動接回、主機有較新版本、或 iPad 還沒設代號時才出現）
 function syncBanner(){
   if(SYNC.restored)return `<div class="card" style="border-color:var(--ok);background:var(--ok-soft)">
@@ -1804,6 +1835,9 @@ function syncBanner(){
     <span>☁️ 主機上有較新的進度備份（${SYNC.newer.replace('T',' ')}），可能是你在別台裝置讀過。</span>
     <span class="row"><button class="ghost sm" onclick="syncPull()">⬇️ 取回</button>
     <button class="ghost sm" onclick="nav('stats')">前往設定</button></span></div></div>`;
+  if(SYNC.avail===false&&plat()==='mac')return `<div class="card" style="border-color:var(--warn);background:var(--warn-soft)"><div class="row spread">
+    <span>⚠️ iPad／iPhone 的 Safari 會把「連續 7 天沒開過」的網站資料清掉，成績與標記會不見。每週開一次就會重新計時；也建議定期「匯出進度」存一份。</span>
+    <button class="ghost sm" onclick="nav('stats')">看說明</button></div></div>`;
   if(!syncOn()&&plat()==='mac')return `<div class="card" style="border-color:var(--warn);background:var(--warn-soft)"><div class="row spread">
     <span>⚠️ iPad／iPhone 的 Safari 會在 7 天沒開這個網站後清掉進度與標記。建議設一個<b>使用者代號</b>，讓進度自動備份到主機。</span>
     <button class="ghost sm" onclick="nav('stats')">去設定</button></div></div>`;
@@ -1827,7 +1861,7 @@ function vStats(){
       html+=`<tr><td>${h.date}</td><td>${uLabel(h.uid)}</td><td>${h.score}/${h.total}（${Math.round(h.score/h.total*100)}%）</td></tr>`;
     html+='</table>';
   }
-  return html+`</div><div class="card"><h3>⚠️ 資料說明</h3><div class="muted">進度存在這台電腦的瀏覽器（localStorage）。換電腦或清瀏覽器資料前，請先「匯出進度」備份，或用上方的<b>☁️ 進度備份到主機</b>自動備份。<br>📌 <b>「匯出／匯入」也包含「📌重點」裡『標記模式』的螢光筆底色與字樣調整（粗體／紅字／藍字／一般）</b>，換裝置可帶著走；惟若之後重點文字有更新，已標記處的位置可能對不準。<br>🗑️ <b>「清除全部記錄」只清測驗相關資料</b>，你的標記與網頁內編輯的重點會保留。</div></div>`;
+  return html+`</div><div class="card"><h3>⚠️ 資料說明</h3><div class="muted">進度存在這台裝置的瀏覽器（localStorage）。換裝置或清瀏覽器資料前，請先「匯出進度」備份${SYNC.avail===false?'':'，或用上方的<b>☁️ 進度備份到主機</b>自動備份'}。<br>📌 <b>「匯出／匯入」也包含「📌重點」裡『標記模式』的螢光筆底色與字樣調整（粗體／紅字／藍字／一般）</b>，換裝置可帶著走；惟若之後重點文字有更新，已標記處的位置可能對不準。<br>🗑️ <b>「清除全部記錄」只清測驗相關資料</b>，你的標記與網頁內編輯的重點會保留。</div></div>`;
 }
 function clearWrong(){
   if(!S.wrong.length){alert('目前沒有錯題記錄。');return;}
